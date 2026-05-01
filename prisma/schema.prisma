@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+    provider = "prisma-client"
+    output   = "../src/generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+enum AnimeStatus {
+    PLANNING
+    WATCHING
+    COMPLETED
+    DROPPED
+    ON_HOLD
+}
+
+model User {
+    id    String  @id @default(cuid())
+    name  String? @unique
+    email String  @unique
+    image String?
+
+    animeList UserAnime[]
+
+    createdAt DateTime @default(now())
+}
+
+model Anime {
+    id        String @id @default(cuid())
+    anilistId Int    @unique
+
+    title      String
+    coverImage String
+    episodes   Int?
+    season     String?
+    year       Int?
+
+    genres String[] // PostgreSQL array (Supabase ใช้ได้)
+    studio String?
+
+    // cache จาก API
+    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+
+    users UserAnime[]
+}
+
+model UserAnime {
+    id String @id @default(cuid())
+
+    userId  String
+    animeId String
+
+    status   AnimeStatus @default(PLANNING)
+    score    Int?
+    progress Int         @default(0)
+
+    notes String? @db.Text
+
+    startDate  DateTime?
+    finishDate DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    anime Anime @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, animeId])
+}
