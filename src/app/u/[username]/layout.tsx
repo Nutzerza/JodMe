@@ -5,16 +5,12 @@ import Sidebar from '@/components/Sidebar';
 
 interface Props {
     children: ReactNode;
-    params: Promise<{ username: string }>;
+    params: { username: string };
 }
 
 export default async function Layout({ children, params }: Props) {
 
     const { username } = await params;
-    const user = getMockUser(username);
-    console.log('User:', user?.username);
-
-    if (!user) return notFound();
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 text-white">
@@ -27,10 +23,10 @@ export default async function Layout({ children, params }: Props) {
 
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-                            {user.username.slice(0, 2).toUpperCase()}
+                            {username.slice(0, 2).toUpperCase()}
                         </div>
                         <span className="text-sm text-slate-400">
-                            {user.username}
+                            {username}
                         </span>
                     </div>
                 </div>

@@ -1,11 +1,10 @@
 // app/u/[username]/mylist/page.tsx
 
 import MyListClient from '@/components/myListPage/MyListClient';
-import { getUserAnimeList } from '@/lib/api/userList';
+import { getUserAnimeList } from '@/app/api/userList';
 
 export default async function MyListPage() {
-    // ⚠️ localStorage ใช้ใน server ไม่ได้
-    // 👉 ถ้ายังใช้ localStorage → ต้องปล่อยให้ client โหลดเอง
+
     const animeList = await getUserAnimeList();
 
     // 👉 ในอนาคตควรเปลี่ยนเป็น DB fetch ตรงนี้

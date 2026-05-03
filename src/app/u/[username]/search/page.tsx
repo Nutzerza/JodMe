@@ -1,6 +1,6 @@
 // app/u/[username]/search/page.tsx
 
-import { getAllAnime } from '@/lib/api/anime';
+import { getAllAnime } from '@/app/api/anime';
 import SearchClient from '@/components/searchPage/SearchClient';
 
 export default async function SearchPage() {

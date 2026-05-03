@@ -2,7 +2,7 @@
 
 import { Sparkles, Star, TrendingUp, BarChart3, Search, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AnimatedCards } from '@/components/AnimatedCards'; // ✅ client แยก
+import { AnimatedCards } from '@/components/AnimatedCards';
 
 interface LandingProps {
     onGetStarted?: () => void; // optional (เพราะ server ใช้ onClick ไม่ได้)
@@ -60,8 +60,8 @@ export default function Landing({ onGetStarted }: LandingProps) {
                         <span className="text-2xl font-bold">ANITRACK</span>
                     </div>
 
-                    {/* ❗ server → ใช้ link แทน onClick */}
-                    <a href="/u/gemini">
+                    {/* server → ใช้ link แทน onClick */}
+                    <a href="/auth">
                         <Button variant="ghost" className="text-sky-400">
                             เข้าสู่แอป →
                         </Button>
@@ -73,7 +73,7 @@ export default function Landing({ onGetStarted }: LandingProps) {
             <section className="container mx-auto px-6 py-20 relative">
                 <div className="max-w-4xl mx-auto text-center relative z-10">
 
-                    {/* ✅ ใช้ h1 จริง */}
+                    {/* ใช้ h1 จริง */}
                     <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-sky-400 via-teal-300 to-blue-400 bg-clip-text text-transparent">
                         จัดการรายการอนิเมะของคุณในที่เดียว
                     </h1>
@@ -83,7 +83,7 @@ export default function Landing({ onGetStarted }: LandingProps) {
                     </p>
 
                     <div className="flex justify-center gap-4">
-                        <a href="/u/gemini">
+                        <a href="/auth">
                             <Button size="lg" className="bg-gradient-to-r from-sky-600 to-teal-500">
                                 <Sparkles className="w-5 h-5 mr-2" />
                                 เริ่มต้นใช้งานฟรี
@@ -92,7 +92,7 @@ export default function Landing({ onGetStarted }: LandingProps) {
                     </div>
                 </div>
 
-                {/* ✅ animation แยกไป client */}
+                {/* animation แยกไป client */}
                 <AnimatedCards covers={mockAnimeCovers} />
             </section>
 
