@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Mail, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import InputField from '@/components/InputField';
+import { signIn } from 'next-auth/react';
 
 type RegisterFormErrors = {
   user_name?: string;
@@ -12,7 +13,7 @@ type RegisterFormErrors = {
   confirm?: string;
 };
 
-export default function RegisterForm({ onSuccess }: { onSuccess: (username: string) => void }) {
+export default function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const [form, setForm] = useState({
     user_name: '',
     email: '',
@@ -63,26 +64,19 @@ export default function RegisterForm({ onSuccess }: { onSuccess: (username: stri
     try {
       setLoading(true);
 
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          ...form,
-          email: form.email.trim(),
-          name: form.user_name.trim(),
-        }),
+      const res = await signIn("credentials", {
+        redirect: true,
+        identify: form.email, // หรือ username
+        password: form.password,
+        callbackUrl: "/u/me",
       });
 
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message);
-
-      localStorage.setItem('token', data.token);
-      onSuccess(data.username);
-
+      if (res?.error) {
+        setFormError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      } else {
+        // login สำเร็จ
+        onSuccess();
+      }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
     } finally {

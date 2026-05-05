@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { getMockUser } from '@/utils/mock/mockUser';
 import { notFound } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 

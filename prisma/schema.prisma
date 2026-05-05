@@ -22,10 +22,10 @@ enum AnimeStatus {
 
 model User {
     id           String  @id @default(cuid())
-    username         String? @unique
+    username     String? @unique
     email        String  @unique
     image        String?
-    passwordHash String
+    passwordHash String?
 
     animeList UserAnime[]
 
