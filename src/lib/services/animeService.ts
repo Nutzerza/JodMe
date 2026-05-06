@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Season } from "@/types/anime";
+import { Season, SEASON_ORDER } from "@/types/anime";
 import { getCurrentSeason } from "@/utils/getCurrentSeason";
 
 // 🔹 call AniList
@@ -47,12 +47,18 @@ async function fetchAniList(query: string) {
 
   const json = await res.json();
 
+  if (!json.data) {
+    console.error("AniList error:", json.errors);
+    return [];
+  }
+
   return json.data.Page.media.map((a: any) => ({
     anilistId: a.id,
     title: a.title.romaji,
     coverImage: a.coverImage.large,
     episodes: a.episodes,
     season: a.season,
+    seasonOrder: SEASON_ORDER[a.season as keyof typeof SEASON_ORDER] ?? null,
     year: a.seasonYear,
     genres: a.genres,
     averageScore: a.averageScore ? a.averageScore / 10 : null,
@@ -76,6 +82,9 @@ export async function hybridSearchAnime(query: string) {
       title: {
         contains: query,
         mode: "insensitive",
+      },
+      status: {
+        in: ["RELEASING", "FINISHED"],
       },
     },
     orderBy: { year: 'desc' },
@@ -118,48 +127,109 @@ async function saveNewAnime(animeList: any[]) {
         averageScore: true,
         description: true,
         trailer: true,
+        status: true,
       },
     });
+
+    const STATUS_PRIORITY: Record<string, number> = {
+      NOT_YET_RELEASED: 0,
+      RELEASING: 1,
+      FINISHED: 2,
+      CANCELLED: 3,
+    };
 
     const existingMap = new Map(
       existingList.map(a => [a.anilistId, a])
     );
 
-    await prisma.$transaction(
-      animeList.map((anime) => {
-        const existing = existingMap.get(anime.anilistId);
+    const queries = animeList.flatMap((anime) => {
+      const existing = existingMap.get(anime.anilistId);
 
-        const shouldUpdateEpisodes =
-          anime.episodes != null &&
-          (!existing?.episodes || anime.episodes > existing.episodes);
+      // 🔥 ไม่มีใน DB → create
+      if (!existing) {
+        return [
+          prisma.anime.create({
+            data: anime,
+          }),
+        ];
+      }
 
-        return prisma.anime.upsert({
+      // 🔍 check diff
+      const shouldUpdateEpisodes =
+        anime.episodes != null &&
+        (!existing.episodes || anime.episodes > existing.episodes);
+
+      const shouldUpdateScore =
+        anime.averageScore != null &&
+        Math.abs(anime.averageScore - (existing.averageScore ?? 0)) > 0.2;
+
+      const normalize = (text?: string | null) =>
+        text?.replace(/\s+/g, ' ').trim();
+      const shouldUpdateDescription =
+        anime.description &&
+        normalize(anime.description) !== normalize(existing.description);
+
+      const shouldUpdateTrailer =
+        anime.trailer &&
+        anime.trailer !== existing.trailer;
+
+      const shouldUpdateStatus =
+        anime.status &&
+        (
+          !existing.status ||
+          STATUS_PRIORITY[anime.status] > (STATUS_PRIORITY[existing.status] ?? -1)
+        );
+
+      // 🔥 ไม่มีอะไรเปลี่ยน → skip
+      if (
+        !shouldUpdateEpisodes &&
+        !shouldUpdateScore &&
+        !shouldUpdateDescription &&
+        !shouldUpdateTrailer &&
+        !shouldUpdateStatus
+      ) {
+        return []; // ❗ สำคัญมาก
+      }
+
+      // ✅ update เฉพาะ field ที่เปลี่ยน
+      return [
+        prisma.anime.update({
           where: { anilistId: anime.anilistId },
-          update: {
-            ...(anime.averageScore !== undefined && { averageScore: anime.averageScore }),
+          data: {
             ...(shouldUpdateEpisodes && { episodes: anime.episodes }),
-            ...(anime.description && { description: anime.description }),
-            ...(anime.trailer && { trailer: anime.trailer }),
+            ...(shouldUpdateScore && { averageScore: anime.averageScore }),
+            ...(shouldUpdateDescription && { description: anime.description }),
+            ...(shouldUpdateTrailer && { trailer: anime.trailer }),
+            ...(shouldUpdateStatus && { status: anime.status }),
           },
-          create: anime,
-        });
-      })
-    );
+        }),
+      ];
+    });
+
+    if (queries.length === 0) return; // 🔥 ไม่มีอะไรต้อง update
+
+    await prisma.$transaction(queries);
+
   } catch (err) {
     console.error("saveNewAnime error:", err);
   }
 }
 
 export async function getAllAnime(page = 1, limit = 20) {
-  return prisma.$queryRawUnsafe(`
-    SELECT *
-    FROM "Anime"
-    ORDER BY 
-      "year" DESC NULLS LAST,
-      "createdAt" DESC
-    LIMIT ${limit}
-    OFFSET ${(page - 1) * limit}
-  `);
+  return prisma.anime.findMany({
+    where: {
+      status: {
+        in: ['RELEASING', 'FINISHED'],
+      },
+    },
+    orderBy: [
+      { year: { sort: 'desc', nulls: 'last' } },
+      { seasonOrder: 'desc' },
+      // { createdAt: 'desc' },
+    ],
+    skip: (page - 1) * limit,
+    take: limit,
+  });
 }
 
 async function fetchSeasonFromAniList(season: Season, year: number) {
@@ -263,19 +333,21 @@ function mergeAnime(db: any[], api: any[], limit = 40) {
   return merged.slice(0, limit);
 }
 
-export async function getSeasonAnime() {
-  const { season, year } = getCurrentSeason();
+export async function getSeasonAnime(season?: Season, year?: number) {
+  if (!season || !year) {
+    const current = getCurrentSeason();
+    season = current.season;
+    year = current.year;
+  }
 
   const dbAnime = await prisma.anime.findMany({
     where: { season, year },
     take: 40,
+    orderBy: { updatedAt: 'desc' },
   });
-
-  if (dbAnime.length > 10) return dbAnime;
 
   const apiAnime = await fetchSeasonFromAniList(season, year);
 
-  // 🔹 4. background save (ไม่ await)
   void saveNewAnime(apiAnime);
 
   return mergeAnime(dbAnime, apiAnime);

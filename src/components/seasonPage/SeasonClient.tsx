@@ -10,38 +10,95 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { getAnimeList, addAnimeToList } from '@/utils/storage';
+import AnimeDetailDialog from '@/components/AnimeDetailDialog';
 
 interface Props {
   initialAnime: Anime[];
 }
 
+// 🔥 season helpers
+const seasons = ['WINTER', 'SPRING', 'SUMMER', 'FALL'] as const;
+
+function getNextSeason(season: string, year: number) {
+  const i = seasons.indexOf(season as any);
+  if (i === 3) return { season: seasons[0], year: year + 1 };
+  return { season: seasons[i + 1], year };
+}
+
+function getPrevSeason(season: string, year: number) {
+  const i = seasons.indexOf(season as any);
+  if (i === 0) return { season: seasons[3], year: year - 1 };
+  return { season: seasons[i - 1], year };
+}
+
 export default function SeasonClient({ initialAnime }: Props) {
-  const [season, setSeason] = useState('Winter 2024');
-  const [filter, setFilter] = useState('all');
+  const [season, setSeason] = useState<typeof seasons[number]>('SPRING');
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [anime, setAnime] = useState<Anime[]>(initialAnime);
+  const [loading, setLoading] = useState(false);
+
+  const [detailAnime, setDetailAnime] = useState<Anime | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const [filter, setFilter] = useState('all'); // ✅ FIX
   const [userList, setUserList] = useState<any[]>([]);
+
+  // 🔥 fetch season
+  useEffect(() => {
+    const fetchSeason = async () => {
+      try {
+        setLoading(true);
+
+        const res = await fetch(
+          `/api/anime/season?season=${season}&year=${year}`
+        );
+
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          setAnime(data);
+        } else {
+          console.error('Invalid data:', data);
+          setAnime([]);
+        }
+
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSeason();
+  }, [season, year]);
 
   useEffect(() => {
     setUserList(getAnimeList());
   }, []);
 
-  // ✅ filter type (tv/movie/ona)
+  // 🔥 filter
   const filtered = useMemo(() => {
-    if (filter === 'all') return initialAnime;
-    return initialAnime.filter(a => a.genres.includes(filter));
-  }, [filter, initialAnime]);
+    if (filter === 'all') return anime;
 
-  const isInList = (animeId: number) => {
+    // ⚠️ ปัจจุบันคุณใช้ genres เป็น filter (ยังไม่ถูกจริง)
+    return anime.filter(a =>
+      a.genres?.some(g => g.toLowerCase() === filter)
+    );
+  }, [filter, anime]);
+
+  const isInList = (animeId: string) => {
     return userList.some(entry => entry.anime.id === animeId);
   };
 
-  const getStatusInList = (animeId: number): AnimeStatus | null => {
+  const getStatusInList = (animeId: string): AnimeStatus | null => {
     const entry = userList.find(e => e.anime.id === animeId);
     return entry?.status || null;
   };
 
-  const handleQuickAdd = (animeId: number) => {
-    const anime = initialAnime.find(a => a.id === animeId);
-    if (!anime) return;
+  const handleQuickAdd = (animeId: string) => {
+    const found = anime.find(a => a.id === animeId); // ✅ FIX
+
+    if (!found) return;
 
     if (isInList(animeId)) {
       toast.info('Already in your list');
@@ -49,7 +106,7 @@ export default function SeasonClient({ initialAnime }: Props) {
     }
 
     const success = addAnimeToList({
-      anime,
+      anime: found,
       status: 'plan_to_watch',
       progress: 0,
       score: null,
@@ -70,7 +127,7 @@ export default function SeasonClient({ initialAnime }: Props) {
     return <Icon className={`w-10 h-10 ${colors[index % colors.length]}`} />;
   };
 
-  const getStatusBadge = (animeId: number) => {
+  const getStatusBadge = (animeId: string) => {
     const status = getStatusInList(animeId);
     if (!status) return null;
 
@@ -97,17 +154,40 @@ export default function SeasonClient({ initialAnime }: Props) {
     );
   };
 
+  const handleOpenDetail = (anime: Anime) => {
+    setDetailAnime(anime);
+    setDetailOpen(true);
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Season Header */}
+      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            const prev = getPrevSeason(season, year);
+            setSeason(prev.season);
+            setYear(prev.year);
+          }}
+        >
           <ChevronLeft />
         </Button>
 
-        <h1 className="text-2xl font-bold">{season}</h1>
+        <h1 className="text-2xl font-bold">
+          {season} {year}
+        </h1>
 
-        <Button variant="ghost" size="icon">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            const next = getNextSeason(season, year);
+            setSeason(next.season);
+            setYear(next.year);
+          }}
+        >
           <ChevronRight />
         </Button>
 
@@ -117,12 +197,19 @@ export default function SeasonClient({ initialAnime }: Props) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
-            <SelectItem value="tv">TV</SelectItem>
-            <SelectItem value="movie">Movies</SelectItem>
-            <SelectItem value="ona">ONA</SelectItem>
+            <SelectItem value="action">Action</SelectItem>
+            <SelectItem value="comedy">Comedy</SelectItem>
+            <SelectItem value="romance">Romance</SelectItem>
           </SelectContent>
         </Select>
       </div>
+
+      {/* Loading */}
+      {loading && (
+        <p className="text-center text-slate-400 mb-6">
+          Loading season...
+        </p>
+      )}
 
       {/* Grid */}
       <div className="grid grid-cols-4 gap-6">
@@ -132,6 +219,7 @@ export default function SeasonClient({ initialAnime }: Props) {
             anime={anime}
             icon={getAnimeIcon(index)}
             statusBadge={getStatusBadge(anime.id)}
+            onClick={() => handleOpenDetail(anime)}
             actionButton={
               <Button
                 onClick={() => handleQuickAdd(anime.id)}
@@ -144,6 +232,12 @@ export default function SeasonClient({ initialAnime }: Props) {
           />
         ))}
       </div>
+
+      <AnimeDetailDialog
+        anime={detailAnime}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+      />
     </div>
   );
 }

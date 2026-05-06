@@ -42,6 +42,7 @@ model Anime {
   trailer      String? // URL ของ trailer (ถ้ามี)
   episodes     Int?
   season       String?
+  seasonOrder  Int? // 1-4 สำหรับ WINTER-SPRING-SUMMER-FALL
   year         Int?
   averageScore Float?
   status       String?

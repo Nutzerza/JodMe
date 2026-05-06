@@ -36,7 +36,7 @@ export default function SearchClient({ initialAnime }: Props) {
   const [detailOpen, setDetailOpen] = useState(false);
 
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Anime[]>(initialAnime);
+  const [results, setResults] = useState<Anime[]>(Array.isArray(initialAnime) ? initialAnime : []);
   const [loading, setLoading] = useState(false);
 
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
@@ -110,7 +110,7 @@ export default function SearchClient({ initialAnime }: Props) {
   };
 
   useEffect(() => {
-    setResults(initialAnime);
+    setResults(Array.isArray(initialAnime) ? initialAnime : []);
   }, [initialAnime]);
 
   // 🔥 search จาก API
