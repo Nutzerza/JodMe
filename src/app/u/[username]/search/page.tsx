@@ -1,11 +1,20 @@
 // app/u/[username]/search/page.tsx
 
-import { getAllAnime } from '@/app/api/anime';
+import { getAllAnime } from '@/lib/services/animeService';
 import SearchClient from '@/components/searchPage/SearchClient';
+import { Anime } from '@/types/anime';
 
 export default async function SearchPage() {
-    // ✅ server สามารถใช้ mock DB ได้
-    const anime = await getAllAnime();
+  const data = await getAllAnime(1, 20) as Anime[];
 
-    return <SearchClient initialAnime={anime} />;
+  const anime = data.map(a => ({
+    ...a,
+    episodes: a.episodes ?? undefined,
+    season: a.season ?? undefined,
+    year: a.year ?? undefined,
+    studio: a.studio ?? undefined,
+    averageScore: a.averageScore ?? undefined,
+  }));
+
+  return <SearchClient initialAnime={anime} />;
 }

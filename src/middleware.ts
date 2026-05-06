@@ -4,27 +4,39 @@ import { jwtVerify } from 'jose';
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-
-  //  กันหน้า public ก่อน (สำคัญ)
-  if (pathname.startsWith('/auth')) {
-    return NextResponse.next();
-  }
-
   const token = req.cookies.get('token')?.value;
 
-  // ไม่มี token → ไป login
-  if (!token) {
+  const isAuthPage = pathname.startsWith('/auth');
+  const isPrivatePage = pathname.startsWith('/u');
+
+  // 🔐 ตรวจ token
+  let isValidToken = false;
+
+  if (token) {
+    try {
+      await jwtVerify(
+        token,
+        new TextEncoder().encode(process.env.JWT_SECRET!)
+      );
+      isValidToken = true;
+    } catch {
+      isValidToken = false;
+    }
+  }
+
+  // ✅ 1. ถ้า login แล้ว → ห้ามเข้า /auth
+  if (isAuthPage && isValidToken) {
+    return NextResponse.redirect(new URL('/u/me', req.url));
+  }
+
+  // ✅ 2. ถ้าเป็น private page แต่ยังไม่ login
+  if (isPrivatePage && !isValidToken) {
     return NextResponse.redirect(new URL('/auth', req.url));
   }
 
-  try {
-    await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET!));
-    return NextResponse.next();
-  } catch {
-    return NextResponse.redirect(new URL('/auth', req.url));
-  }
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/u/:path*'], // หน้า private
+  matcher: ['/auth', '/u/:path*'],
 };

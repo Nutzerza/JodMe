@@ -1,15 +1,25 @@
 export type AnimeStatus = 'all' | 'watching' | 'completed' | 'on_hold' | 'dropped' | 'plan_to_watch';
+export type Season = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
 
 export interface Anime {
-  id: number;
+  id: string;
+  anilistId: number;
+
   title: string;
-  episodes: number;
+  episodes?: number;
+  averageScore?: number;
+  status?: string;
   season?: string;
   year?: number;
+
   genres: string[];
   studio?: string;
+
   coverImage: string;
   synopsis?: string;
+
+  description?: string | null;
+  trailer?: string | null;
 }
 
 export interface UserAnimeEntry {
