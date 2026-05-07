@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { Plus } from 'lucide-react';
 import { Anime } from '@/types/anime';
 import { useEffect, useRef } from 'react';
 
@@ -8,6 +9,9 @@ interface Props {
   anime: Anime | null;
   open: boolean;
   onClose: () => void;
+  onAdd?: (anime: Anime) => void;
+  isInList?: boolean;
+  actionButton?: React.ReactNode;
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -55,7 +59,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function AnimeDetailDialog({ anime, open, onClose }: Props) {
+export default function AnimeDetailDialog({ anime, open, onClose, onAdd, actionButton, isInList }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   // close on Escape
@@ -131,15 +135,34 @@ export default function AnimeDetailDialog({ anime, open, onClose }: Props) {
               </div>
             </div>
 
-            {/* ── Title + badges ── */}
-            <div className="flex flex-col justify-end pb-1 min-w-0">
+            {/* ── Title + badges + Add button ── */}
+            <div className="flex flex-col justify-end pb-1 min-w-0 flex-1">
               <h2 className="text-white font-bold text-xl leading-tight truncate" title={anime.title}>
                 {anime.title}
               </h2>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap items-center gap-2 mt-2">
                 {anime.status && <StatusBadge status={anime.status} />}
                 {anime.averageScore !== undefined && (
                   <ScoreBadge score={anime.averageScore} />
+                )}
+              </div>
+              <div className="mt-3">
+                {actionButton ?? (
+                  <button
+                    onClick={() => {
+                      if (isInList) return;
+                      onAdd?.(anime);
+                    }}
+                    disabled={isInList}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white transition-all shadow-lg
+                        ${isInList
+                        ? 'bg-slate-600 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-sky-600 to-teal-500 hover:from-sky-500 hover:to-teal-400'
+                      }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {isInList ? 'In List' : 'Add to List'}
+                  </button>
                 )}
               </div>
             </div>

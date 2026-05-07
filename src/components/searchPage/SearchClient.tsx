@@ -1,14 +1,14 @@
+// This is a client component for the search page. It handles searching, pagination, and adding anime to the user's list.
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Circle, Diamond, Hexagon, Flower } from 'lucide-react';
-import { Anime, AnimeStatus } from '@/types/anime';
+import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
 import { AnimeCard } from '@/components/AnimeCard';
 import { AddAnimeDialog } from '@/components/AddAnimeDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { getAnimeList, addAnimeToList } from '@/utils/storage';
 import { useRef } from 'react';
 import AnimeDetailDialog from '@/components/AnimeDetailDialog';
 
@@ -26,10 +26,12 @@ function useDebounce<T>(value: T, delay = 400) {
 
 interface Props {
   initialAnime: Anime[];
+  initialUserList: UserAnimeEntry[]; // สำหรับเช็คว่า anime ไหนอยู่ใน list แล้วบ้าง (optional, ถ้าไม่ให้ถือว่าไม่มีตัวไหนอยู่)
 }
 
-export default function SearchClient({ initialAnime }: Props) {
+export default function SearchClient({ initialAnime, initialUserList }: Props) {
   const [page, setPage] = useState(1);
+  const [userList, setUserList] = useState<UserAnimeEntry[]>(initialUserList);
   const [hasMore, setHasMore] = useState(true);
 
   const [detailAnime, setDetailAnime] = useState<Anime | null>(null);
@@ -41,7 +43,6 @@ export default function SearchClient({ initialAnime }: Props) {
 
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [userList, setUserList] = useState(getAnimeList());
 
   const debouncedQuery = useDebounce(query, 400);
 
@@ -78,6 +79,9 @@ export default function SearchClient({ initialAnime }: Props) {
     return () => observer.disconnect();
   }, [hasMore, query, loading]);
 
+  useEffect(() => {
+    setUserList(Array.isArray(initialUserList) ? initialUserList : []);
+  }, [initialUserList]);
   const loadMore = async () => {
     if (loading || !hasMore) return;
 
@@ -113,13 +117,13 @@ export default function SearchClient({ initialAnime }: Props) {
     setResults(Array.isArray(initialAnime) ? initialAnime : []);
   }, [initialAnime]);
 
-  // 🔥 search จาก API
+  // search จาก API
   useEffect(() => {
     const controller = new AbortController();
 
     const fetchSearch = async () => {
       if (!debouncedQuery.trim()) {
-        // 🔥 reset กลับ pagination mode
+        // reset กลับ pagination mode
         setResults(initialAnime);
         setPage(1);
         setHasMore(true);
@@ -137,7 +141,7 @@ export default function SearchClient({ initialAnime }: Props) {
         const data = await res.json();
 
         setResults(data);
-        setHasMore(false); // 🔥 search ไม่มี load more
+        setHasMore(false); // search ไม่มี load more
 
       } catch (err: any) {
         if (err.name !== 'AbortError') {
@@ -166,21 +170,36 @@ export default function SearchClient({ initialAnime }: Props) {
     setDialogOpen(true);
   };
 
-  const handleAdd = (status: AnimeStatus, progress: number, score: number | null) => {
+  const handleAdd = async (
+    status: AnimeStatus,
+    progress: number,
+    score: number | null
+  ) => {
     if (!selectedAnime) return;
 
-    const success = addAnimeToList({
-      anime: selectedAnime,
-      status,
-      progress,
-      score,
-      dateAdded: new Date().toISOString(),
-    });
+    try {
+      const res = await fetch('/api/userList', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          animeId: selectedAnime.id,
+          status,
+          progress,
+          score,
+        }),
+      });
 
-    if (success) {
+      if (!res.ok) throw new Error();
+
       toast.success(`Added "${selectedAnime.title}"`);
-      setUserList(getAnimeList());
+
       setDialogOpen(false);
+
+      // ✅ refetch list ใหม่
+
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to add anime');
     }
   };
 
@@ -243,7 +262,10 @@ export default function SearchClient({ initialAnime }: Props) {
             }
             actionButton={
               <Button
-                onClick={() => handleAddClick(anime)}
+                onClick={(e) => {
+                  e.stopPropagation(); // ✅ กันไม่ให้ไป trigger card
+                  handleAddClick(anime);
+                }}
                 variant={isInList(anime.id) ? 'outline' : 'default'}
                 size="sm"
               >
@@ -291,6 +313,8 @@ export default function SearchClient({ initialAnime }: Props) {
         anime={detailAnime}
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
+        isInList={detailAnime ? isInList(detailAnime.id) : false}
+        onAdd={handleAddClick}
       />
     </div>
   );

@@ -35,6 +35,8 @@ export interface UserAnimeEntry {
   progress: number; // episodes watched
   score: number | null; // 0-10
   dateAdded: string;
+  userId?: string; // for POST
+  animeId?: string; // for POST
 }
 
 export interface SeasonAnime extends Anime {

@@ -1,22 +1,23 @@
 // app/u/[username]/mylist/page.tsx
 
 import MyListClient from '@/components/myListPage/MyListClient';
-import { getUserAnimeList } from '@/app/api/userList';
+import { fetchUserAnimeListByUserId } from '@/lib/services/userAnimeService';
+import { getUserFromCookie } from '@/lib/auth';
 
-export default async function MyListPage() {
+export default async function MyListPage({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}) {
+  const { username } = await params;
 
-    const animeList = await getUserAnimeList();
+  // ✅ ดึง user จาก cookie
+  const userId = await getUserFromCookie();
 
-    // 👉 ในอนาคตควรเปลี่ยนเป็น DB fetch ตรงนี้
-    const initialData = {
-        animeList: [],
-        stats: {
-            totalAnime: 0,
-            episodesWatched: 0,
-            daysWatched: 0,
-            avgScore: 0,
-        },
-    };
+  // ✅ fetch list
+  const animeList = userId
+    ? await fetchUserAnimeListByUserId(userId)
+    : [];
 
-    return <MyListClient initialList={animeList} />;
+  return <MyListClient initialList={animeList} />;
 }
