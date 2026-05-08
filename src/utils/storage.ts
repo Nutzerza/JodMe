@@ -28,7 +28,7 @@ export const addAnimeToList = (entry: UserAnimeEntry) => {
     return true;
 };
 
-export const updateAnimeEntry = (animeId: number, updates: Partial<UserAnimeEntry>) => {
+export const updateAnimeEntry = (animeId: string, updates: Partial<UserAnimeEntry>) => {
     const list = getAnimeList();
     const index = list.findIndex(item => item.anime.id === animeId);
 
@@ -41,7 +41,7 @@ export const updateAnimeEntry = (animeId: number, updates: Partial<UserAnimeEntr
     return false;
 };
 
-export const removeAnimeFromList = (animeId: number) => {
+export const removeAnimeFromList = (animeId: string) => {
     const list = getAnimeList();
     const filtered = list.filter(item => item.anime.id !== animeId);
     saveAnimeList(filtered);
