@@ -196,6 +196,9 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
       setDialogOpen(false);
 
       // ✅ refetch list ใหม่
+      const updatedListRes = await fetch('/api/userList');
+      const updatedList = await updatedListRes.json();
+      setUserList(updatedList);
 
     } catch (err) {
       console.error(err);
@@ -266,7 +269,7 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
                   e.stopPropagation(); // ✅ กันไม่ให้ไป trigger card
                   handleAddClick(anime);
                 }}
-                variant={isInList(anime.id) ? 'outline' : 'default'}
+                disabled={isInList(anime.id)}
                 size="sm"
               >
                 {isInList(anime.id) ? 'In list' : '+ Add'}

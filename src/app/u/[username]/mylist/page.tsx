@@ -4,12 +4,7 @@ import MyListClient from '@/components/myListPage/MyListClient';
 import { fetchUserAnimeListByUserId } from '@/lib/services/userAnimeService';
 import { getUserFromCookie } from '@/lib/auth';
 
-export default async function MyListPage({
-  params,
-}: {
-  params: Promise<{ username: string }>;
-}) {
-  const { username } = await params;
+export default async function MyListPage() {
 
   // ✅ ดึง user จาก cookie
   const userId = await getUserFromCookie();

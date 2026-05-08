@@ -2,18 +2,19 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles, Circle, Diamond, Hexagon } from 'lucide-react';
-import { Anime, AnimeStatus } from '@/types/anime';
+import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
 import { AnimeCard } from '@/components/AnimeCard';
 import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { getAnimeList, addAnimeToList } from '@/utils/storage';
 import AnimeDetailDialog from '@/components/AnimeDetailDialog';
+import { AddAnimeDialog } from '../AddAnimeDialog';
 
 interface Props {
   initialAnime: Anime[];
+  initialUserList: UserAnimeEntry[];
 }
 
 // 🔥 season helpers
@@ -31,7 +32,7 @@ function getPrevSeason(season: string, year: number) {
   return { season: seasons[i - 1], year };
 }
 
-export default function SeasonClient({ initialAnime }: Props) {
+export default function SeasonClient({ initialAnime, initialUserList }: Props) {
   const [season, setSeason] = useState<typeof seasons[number]>('SPRING');
   const [year, setYear] = useState(new Date().getFullYear());
   const [anime, setAnime] = useState<Anime[]>(initialAnime);
@@ -41,7 +42,10 @@ export default function SeasonClient({ initialAnime }: Props) {
   const [detailOpen, setDetailOpen] = useState(false);
 
   const [filter, setFilter] = useState('all'); // ✅ FIX
-  const [userList, setUserList] = useState<any[]>([]);
+  const [userList, setUserList] = useState<UserAnimeEntry[]>(initialUserList);
+
+  const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // 🔥 fetch season
   useEffect(() => {
@@ -73,8 +77,8 @@ export default function SeasonClient({ initialAnime }: Props) {
   }, [season, year]);
 
   useEffect(() => {
-    setUserList(getAnimeList());
-  }, []);
+    setUserList(initialUserList);
+  }, [initialUserList]);
 
   // 🔥 filter
   const filtered = useMemo(() => {
@@ -95,30 +99,6 @@ export default function SeasonClient({ initialAnime }: Props) {
     return entry?.status || null;
   };
 
-  const handleQuickAdd = (animeId: string) => {
-    const found = anime.find(a => a.id === animeId); // ✅ FIX
-
-    if (!found) return;
-
-    if (isInList(animeId)) {
-      toast.info('Already in your list');
-      return;
-    }
-
-    const success = addAnimeToList({
-      anime: found,
-      status: 'plan_to_watch',
-      progress: 0,
-      score: null,
-      dateAdded: new Date().toISOString(),
-    });
-
-    if (success) {
-      toast.success('Added to Plan to Watch');
-      setUserList(getAnimeList());
-    }
-  };
-
   const getAnimeIcon = (index: number) => {
     const icons = [Sparkles, Circle, Diamond, Hexagon];
     const Icon = icons[index % icons.length];
@@ -127,6 +107,14 @@ export default function SeasonClient({ initialAnime }: Props) {
     return <Icon className={`w-10 h-10 ${colors[index % colors.length]}`} />;
   };
 
+  const handleAddClick = (anime: Anime) => {
+    if (isInList(anime.id)) {
+      toast.info('This anime is already in your list');
+      return;
+    }
+    setSelectedAnime(anime);
+    setDialogOpen(true);
+  };
   const getStatusBadge = (animeId: string) => {
     const status = getStatusInList(animeId);
     if (!status) return null;
@@ -152,6 +140,42 @@ export default function SeasonClient({ initialAnime }: Props) {
         {labels[status]}
       </span>
     );
+  };
+
+  const handleAdd = async (
+    status: AnimeStatus,
+    progress: number,
+    score: number | null
+  ) => {
+    if (!selectedAnime) return;
+
+    try {
+      const res = await fetch('/api/userList', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          animeId: selectedAnime.id,
+          status,
+          progress,
+          score,
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      toast.success(`Added "${selectedAnime.title}"`);
+
+      setDialogOpen(false);
+
+      // ✅ refetch list ใหม่
+      const updatedListRes = await fetch('/api/userList');
+      const updatedList = await updatedListRes.json();
+      setUserList(updatedList);
+      
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to add anime');
+    }
   };
 
   const handleOpenDetail = (anime: Anime) => {
@@ -218,11 +242,19 @@ export default function SeasonClient({ initialAnime }: Props) {
             key={anime.id}
             anime={anime}
             icon={getAnimeIcon(index)}
-            statusBadge={getStatusBadge(anime.id)}
+            statusBadge={
+              isInList(anime.id) && (
+                <span className="px-2 py-1 bg-emerald-600 text-xs rounded">
+                  ✓ In list
+                </span>
+              )}
             onClick={() => handleOpenDetail(anime)}
             actionButton={
               <Button
-                onClick={() => handleQuickAdd(anime.id)}
+                onClick={(e) => {
+                  e.stopPropagation(); // ✅ กันไม่ให้ไป trigger card
+                  handleAddClick(anime);
+                }}
                 size="sm"
                 disabled={isInList(anime.id)}
               >
@@ -233,10 +265,20 @@ export default function SeasonClient({ initialAnime }: Props) {
         ))}
       </div>
 
+      {/* Dialog */}
+      <AddAnimeDialog
+        anime={selectedAnime}
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onAdd={handleAdd}
+      />
+
       <AnimeDetailDialog
         anime={detailAnime}
         open={detailOpen}
+        isInList={detailAnime ? isInList(detailAnime.id) : false}
         onClose={() => setDetailOpen(false)}
+        onAdd={handleAddClick}
       />
     </div>
   );
