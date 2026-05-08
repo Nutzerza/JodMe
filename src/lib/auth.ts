@@ -1,16 +1,18 @@
 // lib/auth.ts
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
+import { getToken } from "next-auth/jwt";
+import { NextRequest } from "next/server";
 
-export async function getUserFromCookie() {
-  const token = (await cookies()).get('token')?.value;
+export async function getUserFromCookie(req: NextRequest) {
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
   if (!token) return null;
 
-  try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-    return payload.userId as string;
-  } catch {
-    return null;
-  }
+  return {
+    userId: token.id as string,
+    name: token.name,
+    email: token.email,
+  };
 }

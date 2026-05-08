@@ -18,43 +18,46 @@ const handler = NextAuth({
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        identify: {},
-        password: {},
+        identify: { },
+        password: { },
       },
       async authorize(credentials) {
         if (!credentials?.identify || !credentials?.password) {
-          return null;
+          throw new Error("Missing credentials");
         }
 
         const value = credentials.identify.trim().toLowerCase();
         const isEmail = value.includes("@");
 
-        // หา user จาก DB
         const user = await prisma.user.findFirst({
           where: isEmail
             ? { email: value }
-            : { username: value }, // แก้จาก name → username
+            : { username: value },
         });
 
-        if (!user) return null;
+        if (!user) {
+          throw new Error("User not found");
+        }
 
-        if (!user.passwordHash) return null;
+        if (!user.passwordHash) {
+          throw new Error("No password set");
+        }
 
-        // check password
         const isMatch = await bcrypt.compare(
           credentials.password,
           user.passwordHash
         );
 
-        if (!isMatch) return null;
+        if (!isMatch) {
+          throw new Error("Invalid password");
+        }
 
-        // return user ให้ NextAuth
         return {
           id: user.id,
           name: user.username,
           email: user.email,
         };
-      },
+      }
     }),
   ],
 
@@ -113,11 +116,11 @@ const handler = NextAuth({
     },
 
     async session({ session, token }) {
-      if (session.user && token.id) {
+      if (session.user) {
         session.user.id = token.id as string;
       }
       return session;
-    },
+    }
   },
 
   session: {

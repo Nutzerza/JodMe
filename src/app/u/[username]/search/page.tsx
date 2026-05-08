@@ -3,8 +3,8 @@
 import { getAllAnime } from '@/lib/services/animeService';
 import SearchClient from '@/components/searchPage/SearchClient';
 import { Anime } from '@/types/anime';
-import { getUserFromCookie } from '@/lib/auth';
-import { fetchUserAnimeListByUserId } from '@/lib/services/userAnimeService';
+import { fetchUserAnimeListByUsername } from '@/lib/services/userAnimeService';
+import { getServerSession } from "next-auth";
 
 export default async function SearchPage() {
   const data = await getAllAnime(1, 20) as Anime[];
@@ -18,12 +18,13 @@ export default async function SearchPage() {
     averageScore: a.averageScore ?? undefined,
   }));
 
-  // ✅ ดึง user จาก cookie
-  const userId = await getUserFromCookie();
+  // ดึง user
+  const session = await getServerSession();
+  const username = session?.user?.name || null;
 
   // ✅ fetch list
-  const userList = userId
-    ? await fetchUserAnimeListByUserId(userId)
+  const userList = username
+    ? await fetchUserAnimeListByUsername(username)
     : [];
 
   return <SearchClient initialAnime={anime} initialUserList={userList} />;

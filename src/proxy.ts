@@ -1,42 +1,26 @@
-import { NextResponse } from 'next/server';
-import { NextRequest } from 'next/server';
-import { jwtVerify } from 'jose';
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const token = req.cookies.get('token')?.value;
+
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
 
   const isAuthPage = pathname.startsWith('/auth');
   const isPrivatePage = pathname.startsWith('/u');
 
-  // 🔐 ตรวจ token
-  let isValidToken = false;
-
-  if (token) {
-    try {
-      await jwtVerify(
-        token,
-        new TextEncoder().encode(process.env.JWT_SECRET!)
-      );
-      isValidToken = true;
-    } catch {
-      isValidToken = false;
-    }
-  }
-
-  // ✅ 1. ถ้า login แล้ว → ห้ามเข้า /auth
-  if (isAuthPage && isValidToken) {
+  // ✅ 1. login แล้ว ห้ามเข้า auth
+  if (isAuthPage && token) {
     return NextResponse.redirect(new URL('/u/me', req.url));
   }
 
-  // ✅ 2. ถ้าเป็น private page แต่ยังไม่ login
-  if (isPrivatePage && !isValidToken) {
+  // ✅ 2. ยังไม่ login แต่เข้า private
+  if (isPrivatePage && !token) {
     return NextResponse.redirect(new URL('/auth', req.url));
   }
 
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: ['/auth', '/u/:path*'],
-};

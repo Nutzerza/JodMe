@@ -33,8 +33,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`Received update for user: ${userId}, animeId: ${animeId}, status: ${status}, progress: ${progress}, score: ${score}`);
-
     // upsert กันซ้ำ
     const result = await prisma.userAnime.upsert({
       where: {

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { notFound } from 'next/navigation';
 import Sidebar from '@/components/Navbar';
+import UserMenu from '@/components/UserMenu';
 
 interface Props {
   children: ReactNode;
@@ -20,14 +20,7 @@ export default async function Layout({ children, params }: Props) {
             <Sidebar username={username} />
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-              {username.slice(0, 2).toUpperCase()}
-            </div>
-            <span className="text-sm text-slate-400">
-              {username}
-            </span>
-          </div>
+          <UserMenu username={username} />
         </div>
       </header>
 

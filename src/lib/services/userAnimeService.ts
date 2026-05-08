@@ -4,9 +4,14 @@ import { prisma } from '@/lib/prisma';
 import { toFEStatus } from '@/utils/changeStatus';
 import { Prisma } from '@prisma/client';
 
-export async function fetchUserAnimeListByUserId(userId: string) {
+export async function fetchUserAnimeListByUsername(username: string) {
+
+  const user = await prisma.user.findUnique({
+    where: { username },
+  });
+
   const list = await prisma.userAnime.findMany({
-    where: { userId },
+    where: { userId: user?.id },
     include: { anime: true },
     orderBy: { updatedAt: 'desc' },
   });
