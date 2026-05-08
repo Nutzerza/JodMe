@@ -15,7 +15,7 @@ export default function Sidebar({ username }: Props) {
         { name: 'My List', path: `/u/${username}/mylist` },
         { name: 'Search', path: `/u/${username}/search` },
         { name: 'Season', path: `/u/${username}/season` },
-        { name: 'Stats', path: `/u/${username}/stats` },
+        // { name: 'Stats', path: `/u/${username}/stats` },
     ];
 
     return (

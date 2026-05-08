@@ -1,6 +1,7 @@
 // lib/services/userAnimeService.ts
 
 import { prisma } from '@/lib/prisma';
+import { toFEStatus } from '@/utils/changeStatus';
 import { Prisma } from '@prisma/client';
 
 export async function fetchUserAnimeListByUserId(userId: string) {
@@ -26,7 +27,7 @@ export async function fetchUserAnimeListByUserId(userId: string) {
       episodes: entry.anime.episodes ?? undefined,
       year: entry.anime.year ?? undefined,
       season: entry.anime.season ?? undefined,
-      status: entry.anime.status ?? undefined,
+      status: toFEStatus(entry.status),
       averageScore: entry.anime.averageScore ?? undefined,
       studio: entry.anime.studio ?? undefined,
       description: entry.anime.description ?? undefined,

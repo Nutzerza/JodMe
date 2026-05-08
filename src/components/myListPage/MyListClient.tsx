@@ -5,18 +5,32 @@ import { AnimeStatus, UserAnimeEntry } from '@/types/anime';
 import { StatusSidebar } from '@/components/StatusSidebar';
 import { AnimeListItem } from '@/components/AnimeCard';
 
+type UpdatePayload = {
+  progress?: number;
+  status?: AnimeStatus;
+  score?: number | null;
+};
+
 export default function MyListClient({ initialList }: { initialList: UserAnimeEntry[] }) {
-  const [animeList] = useState<UserAnimeEntry[]>(initialList);
+  const [animeList, setAnimeList] = useState<UserAnimeEntry[]>(initialList);
   const [activeStatus, setActiveStatus] = useState<AnimeStatus | 'all'>('all');
   const [sortBy, setSortBy] = useState<'dateAdded' | 'score' | 'title'>('dateAdded');
 
   // ✅ stats
   const stats = useMemo(() => {
     const totalAnime = animeList.length;
-    const episodesWatched = animeList.reduce((sum, e) => sum + e.progress, 0);
+
+    const episodesWatched = animeList.reduce(
+      (sum, e) => sum + e.progress,
+      0
+    );
+
+    const scored = animeList.filter(e => e.score !== null);
+
     const avgScore =
-      animeList.filter(e => e.score !== null).reduce((sum, e) => sum + (e.score || 0), 0) /
-      (animeList.filter(e => e.score !== null).length || 1);
+      scored.length > 0
+        ? scored.reduce((sum, e) => sum + e.score!, 0) / scored.length
+        : 0;
 
     return {
       totalAnime,
@@ -37,17 +51,56 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
 
   // ✅ filter + sort
   const filtered = useMemo(() => {
-    let list =
+    const list =
       activeStatus === 'all'
         ? animeList
         : animeList.filter(e => e.status === activeStatus);
 
     return [...list].sort((a, b) => {
-      if (sortBy === 'score') return (b.score || 0) - (a.score || 0);
+      if (sortBy === 'score') return (b.score ?? 0) - (a.score ?? 0);
       if (sortBy === 'title') return a.anime.title.localeCompare(b.anime.title);
       return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
     });
   }, [animeList, activeStatus, sortBy]);
+
+  // 🔥 FIXED handler
+  const handleUpdate = async (animeId: string, data: UpdatePayload) => {
+    // เก็บ state เก่าไว้ rollback
+    let prevState: UserAnimeEntry[] = [];
+
+    setAnimeList(prev => {
+      prevState = prev;
+
+      return prev.map(e =>
+        e.anime.id === animeId
+          ? { ...e, ...data }
+          : e
+      );
+    });
+
+    try {
+      const res = await fetch('/api/userList', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // ✅ สำคัญ
+        },
+        body: JSON.stringify({
+          animeId,
+          ...data,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('API failed');
+      }
+
+    } catch (err) {
+      console.error(err);
+
+      // 🔥 rollback ถ้า fail
+      setAnimeList(prevState);
+    }
+  };
 
   return (
     <div className="flex gap-8">
@@ -76,6 +129,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
               progress={entry.progress}
               score={entry.score}
               status={entry.status}
+              onUpdate={(data) => handleUpdate(entry.anime.id, data)}
             />
           ))}
         </div>
@@ -84,7 +138,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
   );
 }
 
-function Stat({ label, value }: any) {
+function Stat({ label, value }: { label: string; value: any }) {
   return (
     <div className="bg-slate-800/40 p-4 rounded">
       <div className="text-xs text-slate-400">{label}</div>
