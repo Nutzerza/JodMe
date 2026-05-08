@@ -13,6 +13,11 @@
       "@prisma/client",
       "prisma",
       "@prisma/engines"
+    ],
+    "ignoredBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
     ]
   },
   "dependencies": {
