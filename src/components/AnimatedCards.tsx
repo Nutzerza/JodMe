@@ -5,7 +5,7 @@ import Image from 'next/image';
 
 export function AnimatedCards({ covers }: { covers: string[] }) {
     return (
-        <div className="absolute inset-0 pointer-events-none opacity-20">
+        <div className="absolute inset-0 pointer-events-none opacity-60">
             {covers.map((cover, index) => (
                 <motion.div
                     key={index}

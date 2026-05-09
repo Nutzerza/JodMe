@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 
 const handler = NextAuth({
   providers: [
-    // 🔑 Google
+    // Google
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
@@ -18,8 +18,8 @@ const handler = NextAuth({
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        identify: { },
-        password: { },
+        identify: { type: "text" },
+        password: { type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.identify || !credentials?.password) {
@@ -35,21 +35,13 @@ const handler = NextAuth({
             : { username: value },
         });
 
-        if (!user) {
-          throw new Error("User not found");
-        }
+        // ใช้ fake hash เพื่อป้องกัน timing attack ในกรณีที่ user ไม่มีอยู่จริงหรือไม่มี passwordHash
+        const fakeHash = "$2a$10$7QJ8dYy6fUQvZpWj1rK1cO8QbW9k6QYp7VjY5uZ3r1FQx6XJf9K8e";
+        const hash = user?.passwordHash || fakeHash;
+        const isMatch = await bcrypt.compare(credentials.password, hash);
 
-        if (!user.passwordHash) {
-          throw new Error("No password set");
-        }
-
-        const isMatch = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
-
-        if (!isMatch) {
-          throw new Error("Invalid password");
+        if (!user || !isMatch) {
+          return null;
         }
 
         return {
@@ -61,6 +53,7 @@ const handler = NextAuth({
     }),
   ],
 
+  // Callbacks for custom logic
   callbacks: {
     async signIn({ user, account }) {
       // 🔥 เฉพาะ OAuth
@@ -69,12 +62,12 @@ const handler = NextAuth({
 
         if (!email) return false;
 
-        // 🔎 หา user
+        // หา user
         let dbUser = await prisma.user.findUnique({
           where: { email },
         });
 
-        // ❗ ถ้าไม่มี → สร้างใหม่
+        // ถ้าไม่มี → สร้างใหม่
         if (!dbUser) {
           const baseUsername = email.split("@")[0];
 
@@ -111,6 +104,7 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.username = user.name;
       }
       return token;
     },
@@ -118,13 +112,14 @@ const handler = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.name = token.username as string;
       }
       return session;
     }
   },
 
   session: {
-    strategy: "jwt", // ใช้ JWT ของ NextAuth แทนของเดิม
+    strategy: "jwt", // ใช้ JWT ของ NextAuth แทนการเก็บ session ในฐานข้อมูล
   },
 
   secret: process.env.NEXTAUTH_SECRET,

@@ -65,20 +65,20 @@ export default function AuthClient({ onSuccess, onBack }: Props) {
 
           {/* Logo */}
           <div className="text-center mb-8">
-            {onBack && (
-              <button onClick={onBack} className="text-sky-400 text-sm mb-4">
-                ← กลับหน้าแรก
-              </button>
-            )}
-
             <div className="flex items-center justify-center gap-2 mb-1">
               <Waves className="text-teal-400" />
               <span className="text-xl font-bold tracking-widest text-sky-50">JodMe</span>
             </div>
 
             <p className="text-slate-400 text-sm">
-              Your personal anime universe
+              จักรวาลอนิเมะส่วนตัวของคุณ
             </p>
+
+            {onBack && (
+              <button onClick={onBack} className="text-sky-400 text-sm mt-4">
+                ← กลับหน้าแรก
+              </button>
+            )}
           </div>
 
           {/* Card */}

@@ -1,3 +1,6 @@
+// This is the main authentication page component.
+// It renders the AuthClient component and handles navigation based on authentication success or back button clicks.
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -14,7 +17,8 @@ export default function AuthPage() {
 
   const onBack = () => {
     // Handle back button click, e.g., navigate to previous page
-    router.back();
+    // router.back();
+    router.push(`/`);
   };
 
   return <AuthClient onSuccess={onSuccess} onBack={onBack} />;

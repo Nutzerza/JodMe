@@ -1,62 +1,53 @@
+// This component renders the registration form for new users.
+// It includes form validation, error handling, and integration with NextAuth for credential-based sign-in.
+// The form consists of fields for username, email, password, and password confirmation, and displays appropriate error messages for invalid input or failed registration attempts.
+
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { Mail, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import InputField from '@/components/InputField';
-import { signIn } from 'next-auth/react';
+import { useForm } from '@/hooks/useForm';
+import { registerSchema } from "@/lib/validators/auth";
+import { mapZodErrors } from '@/utils/zod';
 
-type RegisterFormErrors = {
-  user_name?: string;
-  email?: string;
-  password?: string;
-  confirm?: string;
+type RegisterFormValues = {
+  username: string;
+  email: string;
+  password: string;
+  confirm: string;
 };
 
 export default function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
-  const [form, setForm] = useState({
-    user_name: '',
+  const { form, setForm, errors, setErrors, formError, setFormError, handleChange } = useForm<RegisterFormValues>({
+    username: '',
     email: '',
     password: '',
     confirm: '',
   });
 
-  const [errors, setErrors] = useState<RegisterFormErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-
   const [loading, setLoading] = useState(false);
 
   const isInvalid =
-    !form.user_name ||
+    !form.username ||
     !form.email ||
     !form.password ||
     !form.confirm;
 
   const validator = () => {
-    const newErrors: RegisterFormErrors = {};
+    const result = registerSchema.safeParse(form);
 
-    if (!form.user_name.trim()) {
-      newErrors.user_name = 'กรุณากรอกชื่อผู้ใช้';
+    if (!result.success) {
+      setErrors(mapZodErrors(result.error));
+      return false;
     }
 
-    const emailRegex = /^\S+@\S+\.\S+$/;
-    if (!emailRegex.test(form.email)) {
-      newErrors.email = 'อีเมลไม่ถูกต้อง';
-    }
+    return true;
+  };
 
-    if (form.password.length < 6) {
-      newErrors.password = 'รหัสผ่านต้องอย่างน้อย 6 ตัว';
-    }
-
-    if (form.password !== form.confirm) {
-      newErrors.confirm = 'รหัสไม่ตรง';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }
-
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validator()) return;
@@ -64,19 +55,41 @@ export default function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
     try {
       setLoading(true);
 
-      const res = await signIn("credentials", {
-        redirect: true,
-        identify: form.email, // หรือ username
-        password: form.password,
-        callbackUrl: "/u/me",
+      // register ก่อน
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: form.username,
+          email: form.email,
+          password: form.password,
+        }),
       });
 
-      if (res?.error) {
-        setFormError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-      } else {
-        // login สำเร็จ
-        onSuccess();
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFormError(data.message || "สมัครไม่สำเร็จ");
+        return;
       }
+
+      // auto login หลังสมัคร
+      const loginRes = await signIn("credentials", {
+        redirect: false,
+        identify: form.email,
+        password: form.password,
+        // callbackUrl: "/u/me",
+      });
+
+      if (loginRes?.error) {
+        setFormError("สมัครสำเร็จ แต่เข้าสู่ระบบไม่สำเร็จ");
+        return;
+      }
+      // redirect เอง
+      onSuccess();
+
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
     } finally {
@@ -84,29 +97,20 @@ export default function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
     }
   };
 
-  const handleChange = (field: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setForm(f => ({ ...f, [field]: value }));
-
-      // clear error ของ field นั้น
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    };
-
   return (
     <form onSubmit={submit} className="space-y-4">
 
       <div className='space-y-1'>
         <InputField
           icon={<User size={16} />}
-          name="user_name"
+          name="username"
           placeholder="ชื่อ"
-          value={form.user_name}
-          error={!!errors.user_name}
-          onChange={handleChange('user_name')}
+          value={form.username}
+          error={!!errors.username}
+          onChange={handleChange('username')}
         />
-        {errors.user_name && (
-          <p className="text-red-400 text-sm">{errors.user_name}</p>
+        {errors.username && (
+          <p className="text-red-400 text-sm">{errors.username}</p>
         )}
       </div>
 

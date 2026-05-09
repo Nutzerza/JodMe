@@ -1,3 +1,7 @@
+// This component renders the login form for user authentication.
+// It includes form validation, error handling, and integration with NextAuth for credential-based sign-in.
+// The form consists of fields for email/username and password, and displays appropriate error messages for invalid input or failed login attempts.
+
 'use client';
 
 import { useState } from 'react';
@@ -5,55 +9,36 @@ import { signIn } from "next-auth/react";
 import { Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import InputField from '@/components/InputField';
+import { useForm } from '@/hooks/useForm';
+import { loginSchema } from '@/lib/validators/auth';
+import { mapZodErrors } from '@/utils/zod';
 
-type LoginFormErrors = {
-  identify?: string; // email or username
-  password?: string;
+type LoginFormValues = {
+  identify: string; // email or username
+  password: string;
 };
 
 export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
-  const [form, setForm] = useState({ identify: '', password: '' });
-
-  const [errors, setErrors] = useState<LoginFormErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const { form, setForm, errors, setErrors, formError, setFormError, handleChange } = useForm<LoginFormValues>({ identify: '', password: '' });
 
   const [loading, setLoading] = useState(false);
 
   const isInvalid = !form.identify || !form.password;
 
   const validator = () => {
-    const newErrors: LoginFormErrors = {};
+    const result = loginSchema.safeParse(form);
 
-    const value = form.identify.trim();
-
-    if (!value) {
-      newErrors.identify = 'กรุณากรอกอีเมลหรือชื่อผู้ใช้';
-    } else {
-      const isEmail = value.includes('@');
-
-      if (isEmail) {
-        const emailRegex = /^\S+@\S+\.\S+$/;
-        if (!emailRegex.test(value)) {
-          newErrors.identify = 'อีเมลไม่ถูกต้อง';
-        }
-      } else {
-        // username validation (กำหนดเอง)
-        if (value.length < 3) {
-          newErrors.identify = 'ชื่อผู้ใช้ต้องอย่างน้อย 3 ตัว';
-        }
-      }
+    if (!result.success) {
+      setErrors(mapZodErrors(result.error));
+      return false;
     }
 
-    if (!form.password.trim()) {
-      newErrors.password = 'กรุณากรอกรหัสผ่าน';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true;
   };
 
-  const submit = async (e: React.FormEvent) => {
+  // Handle form submission for login
+  const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validator()) return;
@@ -67,9 +52,8 @@ export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         password: form.password,
       });
 
-      if (!res || res.error) {
+      if (res?.error) {
         setFormError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-        return;
       } else {
         // login สำเร็จ
         onSuccess();
@@ -80,19 +64,6 @@ export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       setLoading(false);
     }
   };
-
-  const handleChange = (field: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-
-      setForm(f => ({ ...f, [field]: value }));
-
-      // clear field error
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-
-      // clear global error
-      setFormError(null);
-    };
 
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -125,6 +96,12 @@ export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         {errors.password && (
           <p className="text-red-400 text-sm">{errors.password}</p>
         )}
+      </div>
+
+      <div className="flex justify-end">
+        <a href="#" className="text-sm text-sky-400 hover:underline">
+          ลืมรหัสผ่าน?
+        </a>
       </div>
 
       {formError && <p className="text-red-400 text-sm">{formError}</p>}
