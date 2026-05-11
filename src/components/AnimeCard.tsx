@@ -155,15 +155,7 @@ export function AnimeListItem({ anime, progress, score, status, onUpdate }: Anim
     const newProgress = Math.max(progress - 1, 0);
     onUpdate({ progress: newProgress, status: newProgress === 0 ? 'plan_to_watch' : status });
   };
-
-  const handleScoreEdit = () => {
-    const input = prompt('Enter score (1–10):');
-    if (!input) return;
-    const parsed = Number(input);
-    if (isNaN(parsed) || parsed < 1 || parsed > 10) return;
-    onUpdate?.({ score: parsed, progress, status });
-  };
-
+  
   return (
     <div
       className="group relative flex items-stretch gap-0 rounded-xl overflow-hidden transition-all duration-200"

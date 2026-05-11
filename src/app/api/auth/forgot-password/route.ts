@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
 
       const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`;
 
-      console.log("RESET LINK:", resetLink); // ตอนนี้ใช้ log ไปก่อน
       await sendResetEmail(emailNormalized, resetLink);
     }
 

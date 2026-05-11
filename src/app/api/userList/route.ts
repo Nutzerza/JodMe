@@ -67,7 +67,6 @@ export async function POST(req: NextRequest) {
 }
 
 // map Prisma enum → frontend enum
-import { Prisma } from '@prisma/client';
 import { fetchUserAnimeListByUserId } from '@/lib/services/userAnimeService';
 
 function toPrismaStatus(status: string): AnimeStatus {
@@ -87,18 +86,15 @@ function toPrismaStatus(status: string): AnimeStatus {
   }
 }
 
+import { getToken } from "next-auth/jwt";
+
 export async function getUserFromToken(req: NextRequest) {
-  const token = req.cookies.get('token')?.value;
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
 
   if (!token) return null;
 
-  try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
-
-    return payload.userId as string;
-  } catch {
-    return null;
-  }
+  return token.id as string;
 }
-

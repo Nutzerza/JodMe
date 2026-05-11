@@ -181,6 +181,7 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
       const res = await fetch('/api/userList', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        
         body: JSON.stringify({
           animeId: selectedAnime.id,
           status,
