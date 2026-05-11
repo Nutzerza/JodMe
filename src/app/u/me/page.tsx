@@ -1,7 +1,7 @@
 // app/u/me/page.tsx
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
 
 export default async function Page() {
   const session = await getServerSession();

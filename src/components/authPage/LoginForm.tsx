@@ -5,6 +5,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { signIn } from "next-auth/react";
 import { Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -99,9 +100,9 @@ export default function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <div className="flex justify-end">
-        <a href="#" className="text-sm text-sky-400 hover:underline">
+        <Link href="/auth/forget-password" className="text-sm text-sky-400 hover:underline">
           ลืมรหัสผ่าน?
-        </a>
+        </Link>
       </div>
 
       {formError && <p className="text-red-400 text-sm">{formError}</p>}

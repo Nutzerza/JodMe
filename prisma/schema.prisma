@@ -22,15 +22,18 @@ enum AnimeStatus {
 }
 
 model User {
-  id           String  @id @default(cuid())
-  username     String? @unique
-  email        String  @unique
-  image        String?
-  passwordHash String?
+  id               String      @id @default(cuid())
+  username         String?     @unique
+  email            String      @unique
+  image            String?
+  passwordHash     String?
+  
+  resetToken       String?
+  resetTokenExpiry DateTime?
 
-  animeList UserAnime[]
+  animeList        UserAnime[]
 
-  createdAt DateTime @default(now())
+  createdAt        DateTime    @default(now())
 }
 
 model Anime {

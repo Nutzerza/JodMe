@@ -48,3 +48,16 @@ export const registerSchema = z
     message: "รหัสไม่ตรง",
     path: ["confirm"], // ชี้ error ไป field confirm
   });
+
+export const resetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(6, "รหัสผ่านต้องอย่างน้อย 6 ตัว"),
+    confirm: z.string(),
+    token: z.string().min(1, "Invalid token"),
+  })
+  .refine((data) => data.password === data.confirm, {
+    message: "รหัสผ่านไม่ตรงกัน",
+    path: ["confirm"],
+  });
