@@ -2,7 +2,6 @@
 import { prisma } from '@/lib/prisma';
 import { AnimeStatus } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 
 export async function GET(req: NextRequest) {
   const userId = await getUserFromToken(req);
@@ -25,6 +24,8 @@ export async function POST(req: NextRequest) {
       progress,
       score,
     } = body;
+
+    console.log('Received update:', { userId, animeId, status, progress, score });
 
     if (!userId || !animeId) {
       return NextResponse.json(

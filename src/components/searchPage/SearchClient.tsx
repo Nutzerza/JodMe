@@ -166,6 +166,7 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
       toast.info('This anime is already in your list');
       return;
     }
+    console.log('Selected anime to add:', anime);
     setSelectedAnime(anime);
     setDialogOpen(true);
   };
@@ -177,11 +178,18 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
   ) => {
     if (!selectedAnime) return;
 
+    console.log('Adding anime with data:', {
+      animeId: selectedAnime.id,
+      status,
+      progress,
+      score,
+    });
+
     try {
       const res = await fetch('/api/userList', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        
+
         body: JSON.stringify({
           animeId: selectedAnime.id,
           status,
