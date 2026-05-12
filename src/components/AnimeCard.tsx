@@ -153,7 +153,13 @@ export function AnimeListItem({ anime, progress, score, status, onUpdate }: Anim
   const handleDecrease = () => {
     if (!onUpdate) return;
     const newProgress = Math.max(progress - 1, 0);
-    onUpdate({ progress: newProgress, status: newProgress === 0 ? 'plan_to_watch' : status });
+    if (newProgress === 0) {
+      onUpdate({ progress: newProgress, status: 'plan_to_watch' });
+    } else if (status === 'completed') {
+      onUpdate({ progress: newProgress, status: 'watching' });
+    } else {
+      onUpdate({ progress: newProgress, status });
+    }
   };
   
   return (

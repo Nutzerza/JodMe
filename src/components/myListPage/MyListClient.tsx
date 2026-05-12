@@ -64,7 +64,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
   }, [animeList, activeStatus, sortBy]);
 
   // FIXED handler
-  const handleUpdate = async (animeId: string, data: UpdatePayload) => {
+  const handleUpdate = async (animeListId: number, data: UpdatePayload) => {
     // เก็บ state เก่าไว้ rollback
     let prevState: UserAnimeEntry[] = [];
 
@@ -72,7 +72,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
       prevState = prev;
 
       return prev.map(e =>
-        e.anime.id === animeId
+        e.anime.anilistId === animeListId
           ? { ...e, ...data }
           : e
       );
@@ -85,7 +85,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          animeId,
+          animeListId,
           ...data,
         }),
       });
@@ -129,7 +129,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
               progress={entry.progress}
               score={entry.score}
               status={entry.status}
-              onUpdate={(data) => handleUpdate(entry.anime.id, data)}
+              onUpdate={(data) => handleUpdate(entry.anime.anilistId, data)}
             />
           ))}
         </div>
