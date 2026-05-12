@@ -90,12 +90,12 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
     );
   }, [filter, anime]);
 
-  const isInList = (animeId: string) => {
-    return userList.some(entry => entry.anime.id === animeId);
+  const isInList = (animeListId: number) => {
+    return userList.some(entry => entry.anime.anilistId === animeListId);
   };
 
-  const getStatusInList = (animeId: string): AnimeStatus | null => {
-    const entry = userList.find(e => e.anime.id === animeId);
+  const getStatusInList = (animeListId: number): AnimeStatus | null => {
+    const entry = userList.find(e => e.anime.anilistId === animeListId);
     return entry?.status || null;
   };
 
@@ -108,15 +108,15 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
   };
 
   const handleAddClick = (anime: Anime) => {
-    if (isInList(anime.id)) {
+    if (isInList(anime.anilistId)) {
       toast.info('This anime is already in your list');
       return;
     }
     setSelectedAnime(anime);
     setDialogOpen(true);
   };
-  const getStatusBadge = (animeId: string) => {
-    const status = getStatusInList(animeId);
+  const getStatusBadge = (animeListId: number) => {
+    const status = getStatusInList(animeListId);
     if (!status) return null;
 
     const labels: Record<string, string> = {
@@ -154,7 +154,7 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          animeId: selectedAnime.id,
+          animeListId: selectedAnime.anilistId,
           status,
           progress,
           score,
@@ -167,7 +167,7 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
 
       setDialogOpen(false);
 
-      // ✅ refetch list ใหม่
+      // refetch list ใหม่
       const updatedListRes = await fetch('/api/userList');
       const updatedList = await updatedListRes.json();
       setUserList(updatedList);
@@ -243,7 +243,7 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
             anime={anime}
             icon={getAnimeIcon(index)}
             statusBadge={
-              isInList(anime.id) && (
+              isInList(anime.anilistId) && (
                 <span className="px-2 py-1 bg-emerald-600 text-xs rounded">
                   ✓ In list
                 </span>
@@ -256,9 +256,9 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
                   handleAddClick(anime);
                 }}
                 size="sm"
-                disabled={isInList(anime.id)}
+                disabled={isInList(anime.anilistId)}
               >
-                {isInList(anime.id) ? 'In list' : '+ Add'}
+                {isInList(anime.anilistId) ? 'In list' : '+ Add'}
               </Button>
             }
           />
@@ -276,7 +276,7 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
       <AnimeDetailDialog
         anime={detailAnime}
         open={detailOpen}
-        isInList={detailAnime ? isInList(detailAnime.id) : false}
+        isInList={detailAnime ? isInList(detailAnime.anilistId) : false}
         onClose={() => setDetailOpen(false)}
         onAdd={handleAddClick}
       />

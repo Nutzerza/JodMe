@@ -19,27 +19,29 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const userId = await getUserFromToken(req);
     const {
-      animeId,
+      animeListId,
       status,
       progress,
       score,
     } = body;
 
-    console.log('Received update:', { userId, animeId, status, progress, score });
-
-    if (!userId || !animeId) {
+    if (!userId || !animeListId) {
       return NextResponse.json(
         { error: 'Missing userId or animeId' },
         { status: 400 }
       );
     }
 
+    const anime = await prisma.anime.findUnique({
+      where: { anilistId: animeListId },
+    });
+
     // upsert กันซ้ำ
     const result = await prisma.userAnime.upsert({
       where: {
         userId_animeId: {
           userId: userId as string,
-          animeId,
+          animeId: anime?.id || "",
         },
       },
       update: {
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
       },
       create: {
         userId: userId as string,
-        animeId,
+        animeId: anime?.id || "",
         status: toPrismaStatus(status),
         progress,
         score,

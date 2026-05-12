@@ -157,16 +157,15 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
     return () => controller.abort();
   }, [debouncedQuery]);
 
-  const isInList = (animeId: string) => {
-    return userList.some(entry => entry.anime.id === animeId);
+  const isInList = (animeListId: number) => {
+    return userList.some(entry => entry.anime.anilistId === animeListId);
   };
 
   const handleAddClick = (anime: Anime) => {
-    if (isInList(anime.id)) {
+    if (isInList(anime.anilistId)) {
       toast.info('This anime is already in your list');
       return;
     }
-    console.log('Selected anime to add:', anime);
     setSelectedAnime(anime);
     setDialogOpen(true);
   };
@@ -178,20 +177,13 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
   ) => {
     if (!selectedAnime) return;
 
-    console.log('Adding anime with data:', {
-      animeId: selectedAnime.id,
-      status,
-      progress,
-      score,
-    });
-
     try {
       const res = await fetch('/api/userList', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
 
         body: JSON.stringify({
-          animeId: selectedAnime.id,
+          animeListId: selectedAnime.anilistId,
           status,
           progress,
           score,
@@ -204,7 +196,7 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
 
       setDialogOpen(false);
 
-      // ✅ refetch list ใหม่
+      // refetch list ใหม่
       const updatedListRes = await fetch('/api/userList');
       const updatedList = await updatedListRes.json();
       setUserList(updatedList);
@@ -266,7 +258,7 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
             icon={getAnimeIcon(index)}
             onClick={() => handleOpenDetail(anime)}
             statusBadge={
-              isInList(anime.id) && (
+              isInList(anime.anilistId) && (
                 <span className="px-2 py-1 bg-emerald-600 text-xs rounded">
                   ✓ In list
                 </span>
@@ -278,10 +270,10 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
                   e.stopPropagation(); // ✅ กันไม่ให้ไป trigger card
                   handleAddClick(anime);
                 }}
-                disabled={isInList(anime.id)}
+                disabled={isInList(anime.anilistId)}
                 size="sm"
               >
-                {isInList(anime.id) ? 'In list' : '+ Add'}
+                {isInList(anime.anilistId) ? 'In list' : '+ Add'}
               </Button>
             }
           />
@@ -325,7 +317,7 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
         anime={detailAnime}
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
-        isInList={detailAnime ? isInList(detailAnime.id) : false}
+        isInList={detailAnime ? isInList(detailAnime.anilistId) : false}
         onAdd={handleAddClick}
       />
     </div>
