@@ -32,6 +32,7 @@ model User {
   resetTokenExpiry DateTime?
 
   animeList        UserAnime[]
+  watchHistory     WatchHistory[]
 
   createdAt        DateTime    @default(now())
 }
@@ -59,6 +60,7 @@ model Anime {
   createdAt DateTime @default(now())
 
   users UserAnime[]
+  watchHistory WatchHistory[]
 }
 
 model UserAnime {
@@ -71,8 +73,6 @@ model UserAnime {
   score    Int?
   progress Int         @default(0)
 
-  notes String? @db.Text
-
   startDate  DateTime?
   finishDate DateTime?
 
@@ -83,4 +83,19 @@ model UserAnime {
   anime Anime @relation(fields: [animeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, animeId])
+}
+
+model WatchHistory {
+  id String @id @default(cuid())
+
+  userId  String
+  animeId String
+
+  episode Int
+  watchedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime Anime @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, watchedAt])
 }

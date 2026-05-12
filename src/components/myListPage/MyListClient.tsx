@@ -63,7 +63,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
     });
   }, [animeList, activeStatus, sortBy]);
 
-  // 🔥 FIXED handler
+  // FIXED handler
   const handleUpdate = async (animeId: string, data: UpdatePayload) => {
     // เก็บ state เก่าไว้ rollback
     let prevState: UserAnimeEntry[] = [];

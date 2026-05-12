@@ -2,7 +2,6 @@
 
 import { getSeasonAnime } from '@/lib/services/animeService';
 import { fetchUserAnimeListByUsername } from '@/lib/services/userAnimeService';
-import { getUserFromCookie } from '@/lib/auth';
 import SeasonClient from '@/components/seasonPage/SeasonClient';
 import { Anime } from '@/types/anime';
 import { getServerSession } from "next-auth";
@@ -13,7 +12,7 @@ export default async function SeasonPage() {
   const session = await getServerSession();
   const username = session?.user?.name || null;
 
-  // ✅ fetch list
+  // fetch list
   const animeList = username
     ? await fetchUserAnimeListByUsername(username)
     : [];

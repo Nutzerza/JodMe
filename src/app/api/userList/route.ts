@@ -36,25 +36,61 @@ export async function POST(req: NextRequest) {
       where: { anilistId: animeListId },
     });
 
-    // upsert กันซ้ำ
+    if (!anime) {
+      return NextResponse.json(
+        { error: "Anime not found" },
+        { status: 404 }
+      );
+    }
+
+    const existing = await prisma.userAnime.findUnique({
+      where: {
+        userId_animeId: {
+          userId: userId as string,
+          animeId: anime.id,
+        },
+      },
+    });
+
+    const newStatus = toPrismaStatus(status);
+
+    const data: any = {
+      status: newStatus,
+      progress,
+      score,
+    };
+
+    // startDate logic
+    if (!existing && progress > 0) {
+      data.startDate = new Date();
+    }
+
+    if (existing && existing.progress === 0 && progress > 0) {
+      data.startDate = new Date();
+    }
+
+    // finishDate logic
+    if (newStatus === "COMPLETED") {
+      data.finishDate = new Date();
+    }
+
+    // ถ้าย้อนกลับมาไม่ completed
+    if (existing && existing.status === "COMPLETED" && newStatus !== "COMPLETED") {
+      data.finishDate = null;
+    }
+
     const result = await prisma.userAnime.upsert({
       where: {
         userId_animeId: {
           userId: userId as string,
-          animeId: anime?.id || "",
+          animeId: anime.id,
         },
       },
-      update: {
-        status: toPrismaStatus(status),
-        progress,
-        score,
-      },
+      update: data,
       create: {
         userId: userId as string,
-        animeId: anime?.id || "",
-        status: toPrismaStatus(status),
-        progress,
-        score,
+        animeId: anime.id,
+        ...data,
       },
     });
 

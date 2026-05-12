@@ -171,7 +171,7 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
       const updatedListRes = await fetch('/api/userList');
       const updatedList = await updatedListRes.json();
       setUserList(updatedList);
-      
+
     } catch (err) {
       console.error(err);
       toast.error('Failed to add anime');
@@ -239,7 +239,7 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
       <div className="grid grid-cols-4 gap-6">
         {filtered.map((anime, index) => (
           <AnimeCard
-            key={anime.id}
+            key={`${anime.id}-${anime.anilistId}`}
             anime={anime}
             icon={getAnimeIcon(index)}
             statusBadge={

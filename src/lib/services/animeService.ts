@@ -284,16 +284,16 @@ async function fetchSeasonFromAniList(season: Season, year: number) {
   }
 
   return (json.data.Page.media ?? []).map((a: any) => ({
-    id: `anilist-${a.id}`, // 🔥 กันชน id ให้ไม่ชน DB
     anilistId: a.id,
     title: a.title.romaji,
     coverImage: a.coverImage.large,
     episodes: a.episodes ?? undefined,
     season: a.season ?? undefined,
+    seasonOrder: SEASON_ORDER[a.season as keyof typeof SEASON_ORDER] ?? null,
     year: a.seasonYear ?? undefined,
     genres: a.genres ?? [],
-    studio: a.studios.nodes[0]?.name ?? undefined,
     averageScore: a.averageScore ? a.averageScore / 10 : null,
+    studio: a.studios.nodes[0]?.name ?? undefined,
     status: a.status ?? null,
     description: a.description ?? null,
     // trailer → แปลงเป็น URL ใช้ง่าย
