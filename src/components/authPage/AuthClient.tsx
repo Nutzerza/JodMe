@@ -25,7 +25,7 @@ export default function AuthClient({ onSuccess, onBack }: Props) {
   const handleOAuth = async (provider: string) => {
     setOauthLoading(provider);
     await signIn(provider, {
-      callbackUrl: "/u/me",
+      callbackUrl: "/me",
     });
   };
 

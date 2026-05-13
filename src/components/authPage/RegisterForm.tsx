@@ -80,7 +80,6 @@ export default function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
         redirect: false,
         identify: form.email,
         password: form.password,
-        // callbackUrl: "/u/me",
       });
 
       if (loginRes?.error) {

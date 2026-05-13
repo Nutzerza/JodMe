@@ -1,15 +1,20 @@
 import { ReactNode } from 'react';
 import Sidebar from '@/components/Navbar';
 import UserMenu from '@/components/UserMenu';
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 
 interface Props {
   children: ReactNode;
-  params: Promise<{ username: string }>;
 }
 
-export default async function Layout({ children, params }: Props) {
+export default async function Layout({ children }: Props) {
 
-  const { username } = await params;
+  const session = await getServerSession();
+
+  if (!session?.user?.name) {
+    redirect("/auth");
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 text-white">
@@ -17,10 +22,10 @@ export default async function Layout({ children, params }: Props) {
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <h1 className="text-2xl font-bold">JodMe</h1>
-            <Sidebar username={username} />
+            <Sidebar username={session.user.name} />
           </div>
 
-          <UserMenu username={username} />
+          <UserMenu username={session.user.name} />
         </div>
       </header>
 

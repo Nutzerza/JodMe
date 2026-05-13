@@ -2,12 +2,11 @@
 
 import { prisma } from '@/lib/prisma';
 import { toFEStatus } from '@/utils/changeStatus';
-import { Prisma } from '@prisma/client';
 
-export async function fetchUserAnimeListByUsername(username: string) {
+export async function fetchUserAnimeListByEmail(email: string) {
 
   const user = await prisma.user.findUnique({
-    where: { username },
+    where: { email },
   });
 
   const list = await prisma.userAnime.findMany({

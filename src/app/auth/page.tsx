@@ -12,7 +12,7 @@ export default function AuthPage() {
 
   const onSuccess = () => {
     // Handle successful authentication, e.g., redirect to dashboard
-    router.push(`/u/me`);
+    router.push(`/me`);
   };
 
   const onBack = () => {

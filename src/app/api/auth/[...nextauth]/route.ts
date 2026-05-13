@@ -95,7 +95,11 @@ const handler = NextAuth({
           });
         }
 
+        // overwrite id
+        user.id = dbUser.id;
+        user.name = dbUser.username; // อัพเดตชื่อจาก DB เผื่อมีการแก้ไข
         return true;
+
       }
 
       return true;
