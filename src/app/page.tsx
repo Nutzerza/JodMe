@@ -3,6 +3,7 @@
 import { Sparkles, Star, TrendingUp, BarChart3, Search, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedCards } from '@/components/AnimatedCards';
+import Image from 'next/image';
 
 interface LandingProps {
   onGetStarted?: () => void; // optional (เพราะ server ใช้ onClick ไม่ได้)
@@ -73,6 +74,15 @@ export default function Landing({ onGetStarted }: LandingProps) {
       {/* Hero (LCP สำคัญสุด) */}
       <section className="container mx-auto px-6 py-20 relative">
         <div className="max-w-4xl mx-auto text-center relative z-10">
+          <div className='w-full flex items-center justify-center mb-8'>
+            <Image
+              src="/logo.png"
+              alt="JodMe logo"
+              width={300}
+              height={300}
+              className="pointer-events-none"
+            />
+          </div>
 
           {/* ใช้ h1 จริง */}
           <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-sky-400 via-teal-300 to-blue-400 bg-clip-text text-transparent">

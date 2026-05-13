@@ -136,7 +136,7 @@ export default function AuthClient({ onSuccess, onBack }: Props) {
             {/* Divider */}
             <div className="flex items-center gap-3 mt-6 mb-6">
               <div className="flex-1 h-px bg-sky-900/20" />
-              <span className="text-slate-600 text-xs">หรือใช้อีเมล</span>
+              <span className="text-slate-600 text-xs">หรือใช้</span>
               <div className="flex-1 h-px bg-sky-900/20" />
             </div>
 
