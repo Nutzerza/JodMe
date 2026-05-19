@@ -3,11 +3,12 @@
 import MyListClient from '@/components/myListPage/MyListClient';
 import { fetchUserAnimeListByEmail } from '@/lib/services/userAnimeService';
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 export default async function MyListPage() {
 
   // ดึง user
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const email = session?.user?.email || null;
 
   // fetch list

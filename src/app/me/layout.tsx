@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import Sidebar from '@/components/Navbar';
 import UserMenu from '@/components/UserMenu';
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 import { redirect } from "next/navigation";
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
 
 export default async function Layout({ children }: Props) {
 
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
   if (!session?.user?.name) {
     redirect("/auth");

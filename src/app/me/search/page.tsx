@@ -5,6 +5,7 @@ import SearchClient from '@/components/searchPage/SearchClient';
 import { Anime } from '@/types/anime';
 import { fetchUserAnimeListByEmail } from '@/lib/services/userAnimeService';
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 export default async function SearchPage() {
   const data = await getAllAnime(1, 20) as Anime[];
@@ -19,7 +20,7 @@ export default async function SearchPage() {
   }));
 
   // ดึง user
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const email = session?.user?.email || null;
 
   // ✅ fetch list

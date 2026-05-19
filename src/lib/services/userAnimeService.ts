@@ -9,6 +9,10 @@ export async function fetchUserAnimeListByEmail(email: string) {
     where: { email },
   });
 
+  if (!user) {
+    throw new Error("User not found");
+  }
+
   const list = await prisma.userAnime.findMany({
     where: { userId: user?.id },
     include: { anime: true },

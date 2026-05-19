@@ -1,7 +1,10 @@
-// app/api/userList.ts
-import { prisma } from '@/lib/prisma';
-import { AnimeStatus } from '@prisma/client';
-import { NextRequest, NextResponse } from 'next/server';
+import { AnimeStatus } from "@prisma/client";
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
+
+import { ensureAnimeInDatabase } from "@/lib/services/animeService";
+import { fetchUserAnimeListByUserId } from "@/lib/services/userAnimeService";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const userId = await getUserFromToken(req);
@@ -20,27 +23,20 @@ export async function POST(req: NextRequest) {
 
     const userId = await getUserFromToken(req);
 
-    const {
-      animeListId,
-      status,
-      progress,
-      score,
-    } = body;
+    const { animeListId, status, progress, score } = body;
 
     if (!userId || !animeListId) {
       return NextResponse.json(
-        { error: 'Missing userId or animeId' },
+        { error: "Missing userId or animeId" },
         { status: 400 }
       );
     }
 
-    const anime = await prisma.anime.findUnique({
-      where: { anilistId: animeListId },
-    });
+    const anime = await ensureAnimeInDatabase(Number(animeListId));
 
     if (!anime) {
       return NextResponse.json(
-        { error: "Anime not found" },
+        { error: "Anime not found on AniList" },
         { status: 404 }
       );
     }
@@ -48,7 +44,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.userAnime.findUnique({
       where: {
         userId_animeId: {
-          userId: userId as string,
+          userId,
           animeId: anime.id,
         },
       },
@@ -56,13 +52,18 @@ export async function POST(req: NextRequest) {
 
     const newStatus = toPrismaStatus(status);
 
-    const data: any = {
+    const data: {
+      status: AnimeStatus;
+      progress: number;
+      score: number | null;
+      startDate?: Date;
+      finishDate?: Date | null;
+    } = {
       status: newStatus,
       progress,
       score,
     };
 
-    // startDate logic
     if (!existing && progress > 0) {
       data.startDate = new Date();
     }
@@ -71,12 +72,10 @@ export async function POST(req: NextRequest) {
       data.startDate = new Date();
     }
 
-    // finishDate logic
     if (newStatus === "COMPLETED") {
       data.finishDate = new Date();
     }
 
-    // ถ้าย้อนกลับมาไม่ completed
     if (existing && existing.status === "COMPLETED" && newStatus !== "COMPLETED") {
       data.finishDate = null;
     }
@@ -84,50 +83,44 @@ export async function POST(req: NextRequest) {
     const result = await prisma.userAnime.upsert({
       where: {
         userId_animeId: {
-          userId: userId as string,
+          userId,
           animeId: anime.id,
         },
       },
       update: data,
       create: {
-        userId: userId as string,
+        userId,
         animeId: anime.id,
         ...data,
       },
     });
 
     return NextResponse.json(result);
-
   } catch (err) {
     console.error(err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
 
-// map Prisma enum → frontend enum
-import { fetchUserAnimeListByUserId } from '@/lib/services/userAnimeService';
-
 function toPrismaStatus(status: string): AnimeStatus {
   switch (status) {
-    case 'plan_to_watch':
+    case "plan_to_watch":
       return AnimeStatus.PLANNING;
-    case 'watching':
+    case "watching":
       return AnimeStatus.WATCHING;
-    case 'completed':
+    case "completed":
       return AnimeStatus.COMPLETED;
-    case 'on_hold':
+    case "on_hold":
       return AnimeStatus.ON_HOLD;
-    case 'dropped':
+    case "dropped":
       return AnimeStatus.DROPPED;
     default:
       return AnimeStatus.PLANNING;
   }
 }
-
-import { getToken } from "next-auth/jwt";
 
 export async function getUserFromToken(req: NextRequest) {
   const token = await getToken({

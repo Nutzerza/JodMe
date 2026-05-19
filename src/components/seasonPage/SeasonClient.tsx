@@ -2,39 +2,25 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles, Circle, Diamond, Hexagon } from 'lucide-react';
-import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
-import { AnimeCard } from '@/components/AnimeCard';
-import { Button } from '@/components/ui/button';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from '@/components/ui/select';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AnimeCard } from '@/components/AnimeCard';
 import AnimeDetailDialog from '@/components/AnimeDetailDialog';
-import { AddAnimeDialog } from '../AddAnimeDialog';
+import { AddAnimeDialog } from '@/components/AddAnimeDialog';
+import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
+import { seasons, getNextSeason, getPrevSeason } from '@/utils/seasonUtils';
 
 interface Props {
   initialAnime: Anime[];
   initialUserList: UserAnimeEntry[];
+  initialSeason: typeof seasons[number];
+  initialYear: number;
 }
 
-// 🔥 season helpers
-const seasons = ['WINTER', 'SPRING', 'SUMMER', 'FALL'] as const;
-
-function getNextSeason(season: string, year: number) {
-  const i = seasons.indexOf(season as any);
-  if (i === 3) return { season: seasons[0], year: year + 1 };
-  return { season: seasons[i + 1], year };
-}
-
-function getPrevSeason(season: string, year: number) {
-  const i = seasons.indexOf(season as any);
-  if (i === 0) return { season: seasons[3], year: year - 1 };
-  return { season: seasons[i - 1], year };
-}
-
-export default function SeasonClient({ initialAnime, initialUserList }: Props) {
-  const [season, setSeason] = useState<typeof seasons[number]>('SPRING');
-  const [year, setYear] = useState(new Date().getFullYear());
+export default function SeasonClient({ initialAnime, initialUserList, initialSeason, initialYear }: Props) {
+  const [season, setSeason] = useState<typeof seasons[number]>(initialSeason);
+  const [year, setYear] = useState(initialYear);
   const [anime, setAnime] = useState<Anime[]>(initialAnime);
   const [loading, setLoading] = useState(false);
 
@@ -47,8 +33,10 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // 🔥 fetch season
+  // fetch season
   useEffect(() => {
+    if (season === initialSeason && year === initialYear) return;
+
     const fetchSeason = async () => {
       try {
         setLoading(true);
@@ -58,14 +46,7 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
         );
 
         const data = await res.json();
-
-        if (Array.isArray(data)) {
-          setAnime(data);
-        } else {
-          console.error('Invalid data:', data);
-          setAnime([]);
-        }
-
+        setAnime(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -74,13 +55,13 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
     };
 
     fetchSeason();
-  }, [season, year]);
+  }, [season, year, initialSeason, initialYear]);
 
   useEffect(() => {
     setUserList(initialUserList);
   }, [initialUserList]);
 
-  // 🔥 filter
+  // filter
   const filtered = useMemo(() => {
     if (filter === 'all') return anime;
 
@@ -92,11 +73,6 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
 
   const isInList = (animeListId: number) => {
     return userList.some(entry => entry.anime.anilistId === animeListId);
-  };
-
-  const getStatusInList = (animeListId: number): AnimeStatus | null => {
-    const entry = userList.find(e => e.anime.anilistId === animeListId);
-    return entry?.status || null;
   };
 
   const getAnimeIcon = (index: number) => {
@@ -114,32 +90,6 @@ export default function SeasonClient({ initialAnime, initialUserList }: Props) {
     }
     setSelectedAnime(anime);
     setDialogOpen(true);
-  };
-  const getStatusBadge = (animeListId: number) => {
-    const status = getStatusInList(animeListId);
-    if (!status) return null;
-
-    const labels: Record<string, string> = {
-      watching: '✓ Watching',
-      completed: '✓ Completed',
-      on_hold: '⏸ On hold',
-      dropped: '✗ Dropped',
-      plan_to_watch: '📌 Plan to watch',
-    };
-
-    const colors: Record<string, string> = {
-      watching: 'bg-blue-600',
-      completed: 'bg-emerald-600',
-      on_hold: 'bg-amber-600',
-      dropped: 'bg-red-600',
-      plan_to_watch: 'bg-purple-600',
-    };
-
-    return (
-      <span className={`px-2 py-1 ${colors[status]} text-white text-xs rounded`}>
-        {labels[status]}
-      </span>
-    );
   };
 
   const handleAdd = async (
