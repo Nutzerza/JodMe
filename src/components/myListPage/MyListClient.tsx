@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { toast } from 'sonner';
 import { AnimeStatus, UserAnimeEntry } from '@/types/anime';
 import { StatusSidebar } from '@/components/StatusSidebar';
 import { AnimeListItem } from '@/components/AnimeCard';
@@ -63,20 +64,14 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
     });
   }, [animeList, activeStatus, sortBy]);
 
-  // FIXED handler
   const handleUpdate = async (animeListId: number, data: UpdatePayload) => {
-    // เก็บ state เก่าไว้ rollback
-    let prevState: UserAnimeEntry[] = [];
+    const prevState = animeList;
 
-    setAnimeList(prev => {
-      prevState = prev;
-
-      return prev.map(e =>
-        e.anime.anilistId === animeListId
-          ? { ...e, ...data }
-          : e
-      );
-    });
+    setAnimeList((prev) =>
+      prev.map((e) =>
+        e.anime.anilistId === animeListId ? { ...e, ...data } : e
+      )
+    );
 
     try {
       const res = await fetch('/api/userList', {
@@ -93,12 +88,37 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
       if (!res.ok) {
         throw new Error('API failed');
       }
-
     } catch (err) {
       console.error(err);
-
-      // 🔥 rollback ถ้า fail
       setAnimeList(prevState);
+      toast.error('Failed to update');
+    }
+  };
+
+  const handleRemove = async (animeListId: number, title: string) => {
+    const prevState = animeList;
+    const toastId = toast.loading(`Removing "${title}"...`);
+
+    setAnimeList((prev) => prev.filter((e) => e.anime.anilistId !== animeListId));
+
+    try {
+      const res = await fetch(
+        `/api/userList?animeListId=${animeListId}`,
+        { method: 'DELETE' }
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Failed to remove');
+      }
+
+      toast.success(`Removed "${title}"`, { id: toastId });
+    } catch (err) {
+      console.error(err);
+      setAnimeList(prevState);
+      const message =
+        err instanceof Error ? err.message : 'Failed to remove';
+      toast.error(message, { id: toastId });
     }
   };
 
@@ -130,6 +150,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
               score={entry.score}
               status={entry.status}
               onUpdate={(data) => handleUpdate(entry.anime.anilistId, data)}
+              onRemove={() => handleRemove(entry.anime.anilistId, entry.anime.title)}
             />
           ))}
         </div>

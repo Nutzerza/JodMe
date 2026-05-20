@@ -13,7 +13,7 @@ export function toPrismaStatus(status: FEStatus): PrismaStatus {
   }
 }
 
-// Prisma → FE (🔥 ที่คุณขาดอยู่)
+// Prisma → FE
 export function toFEStatus(status: PrismaStatus): FEStatus {
   switch (status) {
     case 'PLANNING': return 'plan_to_watch';

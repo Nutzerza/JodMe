@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, Plus, Tv, CheckCircle2, Clock, PauseCircle, XCircle, ChevronDown } from 'lucide-react';
+import { Star, Plus, Tv, CheckCircle2, Clock, PauseCircle, XCircle, ChevronDown, Trash2 } from 'lucide-react';
 import { Anime, AnimeStatus } from '@/types/anime';
 import Image from 'next/image';
 import { ScorePickerModal } from '@/components/ScorepickerModal';
@@ -85,6 +85,7 @@ interface AnimeListItemProps {
     status: AnimeStatus;
     score?: number | null;
   }) => void;
+  onRemove?: () => void;
 }
 /* ── Status config ─────────────────────────────────────────────── */
 const STATUS_CONFIG: Record<
@@ -135,7 +136,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export function AnimeListItem({ anime, progress, score, status, onUpdate }: AnimeListItemProps) {
+export function AnimeListItem({ anime, progress, score, status, onUpdate, onRemove }: AnimeListItemProps) {
   const [scoreOpen, setScoreOpen] = useState(false);
   const totalEpisodes = anime.episodes ?? 0;
   const progressPercent = totalEpisodes > 0 ? Math.min((progress / totalEpisodes) * 100, 100) : 0;
@@ -293,6 +294,17 @@ export function AnimeListItem({ anime, progress, score, status, onUpdate }: Anim
           <Star className={`w-3 h-3 ${score !== null ? 'fill-amber-400 text-amber-400' : 'text-slate-600'}`} />
           {score !== null ? score.toFixed(1) : '—'}
         </button>
+
+        {onRemove && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+            title="Remove from list"
+            aria-label="Remove from list"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <ScorePickerModal

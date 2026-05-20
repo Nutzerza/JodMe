@@ -177,11 +177,13 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
   ) => {
     if (!selectedAnime) return;
 
+    const title = selectedAnime.title;
+    const toastId = toast.loading(`Adding "${title}"...`);
+
     try {
       const res = await fetch('/api/userList', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-
         body: JSON.stringify({
           animeListId: selectedAnime.anilistId,
           status,
@@ -190,20 +192,23 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
         }),
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Failed to add anime');
+      }
 
-      toast.success(`Added "${selectedAnime.title}"`);
-
-      setDialogOpen(false);
-
-      // refetch list ใหม่
       const updatedListRes = await fetch('/api/userList');
       const updatedList = await updatedListRes.json();
       setUserList(updatedList);
 
+      toast.success(`Added "${title}"`, { id: toastId });
+      setDialogOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to add anime');
+      const message =
+        err instanceof Error ? err.message : 'Failed to add anime';
+      toast.error(message, { id: toastId });
+      throw err;
     }
   };
 
@@ -290,12 +295,6 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
       {results.length === 0 && query && !loading && (
         <div className="text-center py-12 text-slate-400">
           No results found
-        </div>
-      )}
-
-      {results.length === 0 && !query && (
-        <div className="text-center py-12 text-slate-400">
-          No anime available
         </div>
       )}
 

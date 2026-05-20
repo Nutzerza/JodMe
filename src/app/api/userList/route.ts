@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { ensureAnimeInDatabase } from "@/lib/services/animeService";
 import { fetchUserAnimeListByUserId } from "@/lib/services/userAnimeService";
+import { syncWatchHistory } from "@/lib/services/watchHistoryService";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
@@ -25,10 +26,10 @@ export async function POST(req: NextRequest) {
 
     const { animeListId, status, progress, score } = body;
 
-    if (!userId || !animeListId) {
+    if (!userId) {
       return NextResponse.json(
-        { error: "Missing userId or animeId" },
-        { status: 400 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
@@ -80,22 +81,87 @@ export async function POST(req: NextRequest) {
       data.finishDate = null;
     }
 
-    const result = await prisma.userAnime.upsert({
-      where: {
-        userId_animeId: {
+    const oldProgress = existing?.progress ?? 0;
+    const newProgress = Math.max(0, Math.floor(Number(progress) || 0));
+
+    const result = await prisma.$transaction(async (tx) => {
+      const entry = await tx.userAnime.upsert({
+        where: {
+          userId_animeId: {
+            userId,
+            animeId: anime.id,
+          },
+        },
+        update: { ...data, progress: newProgress },
+        create: {
           userId,
           animeId: anime.id,
+          ...data,
+          progress: newProgress,
         },
-      },
-      update: data,
-      create: {
-        userId,
-        animeId: anime.id,
-        ...data,
-      },
+      });
+
+      await syncWatchHistory(userId, anime.id, oldProgress, newProgress, tx);
+
+      return entry;
     });
 
     return NextResponse.json(result);
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const userId = await getUserFromToken(req);
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const animeListId = Number(searchParams.get("animeListId"));
+
+    if (!animeListId) {
+      return NextResponse.json(
+        { error: "Missing animeListId" },
+        { status: 400 }
+      );
+    }
+
+    const anime = await prisma.anime.findUnique({
+      where: { anilistId: animeListId },
+    });
+
+    if (!anime) {
+      return NextResponse.json({ error: "Anime not found" }, { status: 404 });
+    }
+
+    const existing = await prisma.userAnime.findUnique({
+      where: {
+        userId_animeId: { userId, animeId: anime.id },
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Not in list" }, { status: 404 });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.watchHistory.deleteMany({
+        where: { userId, animeId: anime.id },
+      });
+      await tx.userAnime.delete({
+        where: { id: existing.id },
+      });
+    });
+
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error(err);
     return NextResponse.json(

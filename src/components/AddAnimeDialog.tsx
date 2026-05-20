@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, BookmarkPlus, Star, Tv, CheckCircle2, Clock, PauseCircle, XCircle } from 'lucide-react';
+import { X, BookmarkPlus, Star, Tv, CheckCircle2, Clock, PauseCircle, XCircle, Loader2 } from 'lucide-react';
 import { Anime, AnimeStatus } from '@/types/anime';
 
 interface AddAnimeDialogProps {
   anime: Anime | null;
   open: boolean;
   onClose: () => void;
-  onAdd: (status: AnimeStatus, progress: number, score: number | null) => void;
+  onAdd: (status: AnimeStatus, progress: number, score: number | null) => Promise<void>;
 }
 
 const STATUS_OPTIONS: { value: AnimeStatus; label: string; icon: React.ReactNode; color: string; bg: string; border: string }[] = [
@@ -83,6 +83,7 @@ export function AddAnimeDialog({ anime, open, onClose, onAdd }: AddAnimeDialogPr
   const [progress, setProgress] = useState(0);
   const [score, setScore] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -103,19 +104,28 @@ export function AddAnimeDialog({ anime, open, onClose, onAdd }: AddAnimeDialogPr
   // close on Escape
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const handler = (e: KeyboardEvent) => e.key === 'Escape' && !adding && onClose();
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [open, onClose, adding]);
 
   if (!open || !anime) return null;
 
-  const handleSubmit = () => {
-    onAdd(status, progress, score);
-    setStatus('plan_to_watch');
-    setProgress(0);
-    setScore(null);
-    onClose();
+  const handleSubmit = async () => {
+    if (adding) return;
+
+    setAdding(true);
+    try {
+      await onAdd(status, progress, score);
+      setStatus('plan_to_watch');
+      setProgress(0);
+      setScore(null);
+      onClose();
+    } catch {
+      // Stay open; parent shows error toast
+    } finally {
+      setAdding(false);
+    }
   };
 
   const maxEp = anime.episodes ?? 9999;
@@ -130,7 +140,7 @@ export function AddAnimeDialog({ anime, open, onClose, onAdd }: AddAnimeDialogPr
         backdropFilter: 'blur(6px)',
         transition: 'background-color 0.2s ease',
       }}
-      onClick={(e) => e.currentTarget === e.target && onClose()}
+      onClick={(e) => e.currentTarget === e.target && !adding && onClose()}
     >
       <div
         className="relative w-full max-w-md rounded-2xl overflow-hidden"
@@ -178,7 +188,8 @@ export function AddAnimeDialog({ anime, open, onClose, onAdd }: AddAnimeDialogPr
 
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-colors"
+            disabled={adding}
+            className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(99,102,241,0.15)' }}
           >
             <X className="w-3.5 h-3.5" />
@@ -327,14 +338,16 @@ export function AddAnimeDialog({ anime, open, onClose, onAdd }: AddAnimeDialogPr
         >
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+            disabled={adding}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)' }}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+            disabled={adding}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
               background: `linear-gradient(135deg, ${selectedStatus.color.replace('text-', '')} -20%, #6366f1 60%, #14b8a6 140%)`.replace(
                 /text-(\w+-\d+)/,
@@ -352,7 +365,14 @@ export function AddAnimeDialog({ anime, open, onClose, onAdd }: AddAnimeDialogPr
               boxShadow: '0 4px 16px rgba(99,102,241,0.3)',
             }}
           >
-            Save to List
+            {adding ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save to List'
+            )}
           </button>
         </div>
       </div>

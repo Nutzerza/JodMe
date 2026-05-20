@@ -8,7 +8,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 
 export default async function SearchPage() {
-  const data = await getAllAnime(1, 20) as Anime[];
+  const data = await getAllAnime(1, 10) as Anime[];
 
   const anime = data.map(a => ({
     ...a,

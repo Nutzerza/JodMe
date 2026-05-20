@@ -99,6 +99,9 @@ export default function SeasonClient({ initialAnime, initialUserList, initialSea
   ) => {
     if (!selectedAnime) return;
 
+    const title = selectedAnime.title;
+    const toastId = toast.loading(`Adding "${title}"...`);
+
     try {
       const res = await fetch('/api/userList', {
         method: 'POST',
@@ -111,20 +114,23 @@ export default function SeasonClient({ initialAnime, initialUserList, initialSea
         }),
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Failed to add anime');
+      }
 
-      toast.success(`Added "${selectedAnime.title}"`);
-
-      setDialogOpen(false);
-
-      // refetch list ใหม่
       const updatedListRes = await fetch('/api/userList');
       const updatedList = await updatedListRes.json();
       setUserList(updatedList);
 
+      toast.success(`Added "${title}"`, { id: toastId });
+      setDialogOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to add anime');
+      const message =
+        err instanceof Error ? err.message : 'Failed to add anime';
+      toast.error(message, { id: toastId });
+      throw err;
     }
   };
 

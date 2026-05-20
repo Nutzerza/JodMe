@@ -10,7 +10,7 @@ export async function proxy(req: NextRequest) {
   });
 
   const isAuthPage = pathname.startsWith('/auth');
-  const isPrivatePage = pathname.startsWith('/u');
+  const isPrivatePage = pathname.startsWith('/me');
 
   // ✅ 1. login แล้ว ห้ามเข้า auth
   if (isAuthPage && token) {
@@ -24,3 +24,7 @@ export async function proxy(req: NextRequest) {
 
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: ['/me/:path*', '/auth/:path*'],
+};
