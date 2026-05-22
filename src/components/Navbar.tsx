@@ -8,14 +8,14 @@ interface Props {
   username: string;
 }
 
-export default function Sidebar({ username }: Props) {
+export default function Sidebar({}: Props) {
   const pathname = usePathname();
 
   const menus = [
     { name: 'My List', path: `/me` },
     { name: 'Search', path: `/me/search` },
     { name: 'Season', path: `/me/season` },
-    // { name: 'Stats', path: `/me/stats` },
+    { name: 'Stats', path: `/me/stats` },
   ];
 
   return (

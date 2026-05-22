@@ -30,6 +30,7 @@ export interface Anime {
 }
 
 export interface UserAnimeEntry {
+  id?: string;
   anime: Anime;
   status: AnimeStatus;
   progress: number; // episodes watched
@@ -50,4 +51,22 @@ export interface Stats {
   avgScore: number;
   genreDistribution: { genre: string; count: number; }[];
   scoreDistribution: { score: number; count: number; }[];
+}
+
+export interface MonthlyWatchStat {
+  month: string;
+  episodes: number;
+  anime: number;
+}
+
+export interface WeeklyWatchStat {
+  week: string;
+  episodes: number;
+  anime: number;
+}
+
+export interface RecentWatchStat {
+  anime: Anime;
+  episode: number;
+  watchedAt: string;
 }
