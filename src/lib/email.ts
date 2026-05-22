@@ -1,9 +1,15 @@
 // lib/email.ts
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function sendResetEmail(email: string, link: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is required to send reset emails");
+  }
+
+  const resend = new Resend(apiKey);
+
   await resend.emails.send({
     from: "JodMe <onboarding@resend.dev>", // dev ใช้อันนี้ได้เลย
     to: email,
