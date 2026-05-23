@@ -1,6 +1,7 @@
 export type AnimeStatus = 'all' | 'watching' | 'completed' | 'on_hold' | 'dropped' | 'plan_to_watch';
 export type Season = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
 
+
 export const SEASON_ORDER = {
   WINTER: 1,
   SPRING: 2,

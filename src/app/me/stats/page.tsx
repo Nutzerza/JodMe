@@ -8,6 +8,7 @@ import {
 } from '@/lib/services/watchHistoryService';
 import { getServerSession } from 'next-auth';
 
+
 export default async function StatsPage() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email || null;

@@ -1,25 +1,24 @@
-// This is the main authentication page component.
-// It renders the AuthClient component and handles navigation based on authentication success or back button clicks.
-
-'use client';
-
-import { useRouter } from 'next/navigation';
 import AuthClient from '@/components/authPage/AuthClient';
 
-export default function AuthPage() {
+interface Props {
+  searchParams: Promise<{
+    callbackUrl?: string | string[];
+  }>;
+}
 
-  const router = useRouter();
+export default async function AuthPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const callbackUrl = getSafeCallbackUrl(params.callbackUrl);
 
-  const onSuccess = () => {
-    // Handle successful authentication, e.g., redirect to dashboard
-    router.push(`/me`);
-  };
+  return <AuthClient callbackUrl={callbackUrl} />;
+}
 
-  const onBack = () => {
-    // Handle back button click, e.g., navigate to previous page
-    // router.back();
-    router.push(`/`);
-  };
+function getSafeCallbackUrl(value?: string | string[]) {
+  const raw = Array.isArray(value) ? value[0] : value;
 
-  return <AuthClient onSuccess={onSuccess} onBack={onBack} />;
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) {
+    return '/me';
+  }
+
+  return raw;
 }

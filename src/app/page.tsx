@@ -1,45 +1,44 @@
-// app/(landing)/Landing.tsx  ← Server Component
-
-import { Sparkles, Star, TrendingUp, BarChart3, Search, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { AnimatedCards } from '@/components/AnimatedCards';
+import { BarChart3, Calendar, Search, Sparkles, Star, TrendingUp } from 'lucide-react';
 import Image from 'next/image';
+import { getServerSession } from 'next-auth';
+import { AnimatedCards } from '@/components/AnimatedCards';
+import PublicNavbar from '@/components/PublicNavbar';
+import { Button } from '@/components/ui/button';
+import { authOptions } from '@/lib/authOptions';
 
-interface LandingProps {
-  onGetStarted?: () => void; // optional (เพราะ server ใช้ onClick ไม่ได้)
-}
+export default async function Landing() {
+  const session = await getServerSession(authOptions);
 
-export default function Landing({ onGetStarted }: LandingProps) {
   const features = [
     {
       icon: <Search className="w-6 h-6" />,
       title: 'Search & Track',
-      description: 'ค้นหาอนิเมะและเพิ่มเข้ารายการของคุณได้ง่ายๆ',
+      description: 'Find anime, inspect details, and add titles to your personal list.',
     },
     {
       icon: <Star className="w-6 h-6" />,
       title: 'Rate & Review',
-      description: 'ให้คะแนนและติดตามตอนที่ดูแล้ว',
+      description: 'Score anime and keep your favorites easy to compare.',
     },
     {
       icon: <Calendar className="w-6 h-6" />,
       title: 'Seasonal Anime',
-      description: 'ดูอนิเมะที่กำลังฉายในแต่ละซีซัน',
+      description: 'Browse currently airing and seasonal anime.',
     },
     {
       icon: <BarChart3 className="w-6 h-6" />,
       title: 'Statistics',
-      description: 'วิเคราะห์สถิติการดูและแนวที่ชอบ',
+      description: 'Track your watching habits with personal stats.',
     },
     {
       icon: <TrendingUp className="w-6 h-6" />,
       title: 'Track Progress',
-      description: 'ติดตามความคืบหน้าของแต่ละเรื่อง',
+      description: 'Update episode progress and watching status.',
     },
     {
       icon: <Sparkles className="w-6 h-6" />,
       title: 'Personal Library',
-      description: 'สร้างห้องสมุดอนิเมะส่วนตัวของคุณ',
+      description: 'Build a private anime library that follows your taste.',
     },
   ];
 
@@ -53,28 +52,11 @@ export default function Landing({ onGetStarted }: LandingProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#020617] via-[#0c1a2e]/80 to-[#020617] text-white overflow-hidden">
+      <PublicNavbar isAuthenticated={!!session?.user} />
 
-      {/* Header */}
-      <header className="container mx-auto px-6 py-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-8 h-8 text-teal-400" />
-            <span className="text-2xl font-bold">JodMe</span>
-          </div>
-
-          {/* server → ใช้ link แทน onClick */}
-          <a href="/auth">
-            <Button variant="ghost" className="text-sky-400">
-              เข้าสู่แอป →
-            </Button>
-          </a>
-        </div>
-      </header>
-
-      {/* Hero (LCP สำคัญสุด) */}
       <section className="container mx-auto px-6 py-20 relative">
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          <div className='w-full flex items-center justify-center mb-8'>
+          <div className="w-full flex items-center justify-center mb-8">
             <Image
               src="/logo.png"
               alt="JodMe logo"
@@ -84,40 +66,37 @@ export default function Landing({ onGetStarted }: LandingProps) {
             />
           </div>
 
-          {/* ใช้ h1 จริง */}
           <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-sky-400 via-teal-300 to-blue-400 bg-clip-text text-transparent">
-            จัดการรายการอนิเมะของคุณในที่เดียว
+            Manage your anime list in one place
           </h1>
 
           <p className="text-xl text-slate-300 mb-12 max-w-2xl mx-auto">
-            เก็บบันทึก ติดตาม และวิเคราะห์อนิเมะที่คุณดู พร้อมสถิติครบ
+            Save, track, and analyze the anime you watch with search, seasonal browsing, progress tracking, and stats.
           </p>
 
           <div className="flex justify-center gap-4">
-            <a href="/auth">
+            <a href={session?.user ? '/me' : '/auth'}>
               <Button size="lg" className="bg-gradient-to-r from-sky-600 to-teal-500">
                 <Sparkles className="w-5 h-5 mr-2" />
-                เริ่มต้นใช้งานฟรี
+                {session?.user ? 'Open My List' : 'Start for free'}
               </Button>
             </a>
           </div>
         </div>
 
-        {/* animation แยกไป client */}
         <AnimatedCards covers={animeCovers} />
       </section>
 
-      {/* Features */}
       <section className="container mx-auto px-6 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold mb-4">ฟีเจอร์ครบครัน</h2>
-          <p className="text-slate-400">ทุกสิ่งที่คุณต้องการ</p>
+          <h2 className="text-3xl font-bold mb-4">Everything you need</h2>
+          <p className="text-slate-400">Browse publicly, then log in when you are ready to save.</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {features.map((feature, i) => (
+          {features.map((feature) => (
             <div
-              key={i}
+              key={feature.title}
               className="bg-sky-950/30 rounded-xl p-6 border border-sky-800/40 hover:scale-105 transition"
             >
               <div className="w-12 h-12 bg-teal-500/15 rounded-lg flex items-center justify-center mb-4">
@@ -130,9 +109,8 @@ export default function Landing({ onGetStarted }: LandingProps) {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="text-center py-8 text-slate-400 text-sm">
-        © 2026 JodMe. สร้างด้วย ❤️ โดย Nut. ข้อมูลอนิเมะจาก Anilist API.
+        Copyright 2026 JodMe. Anime data from AniList API.
       </footer>
     </div>
   );

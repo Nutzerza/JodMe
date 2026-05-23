@@ -14,7 +14,13 @@ export async function proxy(req: NextRequest) {
 
   // ✅ 1. login แล้ว ห้ามเข้า auth
   if (isAuthPage && token) {
-    return NextResponse.redirect(new URL('/me', req.url));
+    const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
+    const destination =
+      callbackUrl && callbackUrl.startsWith('/') && !callbackUrl.startsWith('//')
+        ? callbackUrl
+        : '/me';
+
+    return NextResponse.redirect(new URL(destination, req.url));
   }
 
   // ✅ 2. ยังไม่ login แต่เข้า private

@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
+
 /** Sync episode watch logs when list progress changes. */
 export async function syncWatchHistory(
   userId: string,

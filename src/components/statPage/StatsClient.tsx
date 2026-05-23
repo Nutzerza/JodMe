@@ -31,6 +31,7 @@ interface Props {
   recentWatchStats: RecentWatchStat[];
 }
 
+
 type WatchRange = 'monthly' | 'weekly';
 
 export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatchStats, recentWatchStats }: Props) {

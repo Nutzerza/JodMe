@@ -8,6 +8,7 @@ interface Props {
   username: string;
 }
 
+
 export default function Sidebar({}: Props) {
   const pathname = usePathname();
 

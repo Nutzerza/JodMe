@@ -1,18 +1,18 @@
-// This is a client component for the search page. It handles searching, pagination, and adding anime to the user's list.
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Circle, Diamond, Hexagon, Flower } from 'lucide-react';
-import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
-import { AnimeCard } from '@/components/AnimeCard';
-import { AddAnimeDialog } from '@/components/AddAnimeDialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Circle, Diamond, Flower, Hexagon } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRef } from 'react';
+import { AddAnimeDialog } from '@/components/AddAnimeDialog';
+import { AnimeCard } from '@/components/AnimeCard';
 import AnimeDetailDialog from '@/components/AnimeDetailDialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
 
-// 🔥 debounce hook (inline ใช้ได้เลย)
+const PENDING_ANIME_KEY = 'jodme_pending_anime';
+
 function useDebounce<T>(value: T, delay = 400) {
   const [debounced, setDebounced] = useState(value);
 
@@ -26,70 +26,40 @@ function useDebounce<T>(value: T, delay = 400) {
 
 interface Props {
   initialAnime: Anime[];
-  initialUserList: UserAnimeEntry[]; // สำหรับเช็คว่า anime ไหนอยู่ใน list แล้วบ้าง (optional, ถ้าไม่ให้ถือว่าไม่มีตัวไหนอยู่)
+  initialUserList: UserAnimeEntry[];
+  isAuthenticated?: boolean;
 }
 
-export default function SearchClient({ initialAnime, initialUserList }: Props) {
+export default function SearchClient({ initialAnime, initialUserList, isAuthenticated = true }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [page, setPage] = useState(1);
   const [userList, setUserList] = useState<UserAnimeEntry[]>(initialUserList);
   const [hasMore, setHasMore] = useState(true);
-
   const [detailAnime, setDetailAnime] = useState<Anime | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Anime[]>(Array.isArray(initialAnime) ? initialAnime : []);
   const [loading, setLoading] = useState(false);
-
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const debouncedQuery = useDebounce(query, 400);
-
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const tickingRef = useRef(false);
-  useEffect(() => {
-    const el = loadMoreRef.current;
-    if (!el) return;
-    if (!hasMore || query) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          !tickingRef.current &&
-          !loading
-        ) {
-          tickingRef.current = true;
+  const isInList = useCallback((animeListId: number) => {
+    return userList.some(entry => entry.anime.anilistId === animeListId);
+  }, [userList]);
 
-          loadMore().finally(() => {
-            tickingRef.current = false;
-          });
-        }
-      },
-      {
-        root: null,
-        rootMargin: '200px',
-        threshold: 0,
-      }
-    );
-
-    observer.observe(el);
-
-    return () => observer.disconnect();
-  }, [hasMore, query, loading]);
-
-  useEffect(() => {
-    setUserList(Array.isArray(initialUserList) ? initialUserList : []);
-  }, [initialUserList]);
-  const loadMore = async () => {
+  const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
 
     try {
       setLoading(true);
-
       const nextPage = page + 1;
-
       const res = await fetch(`/api/anime/list?page=${nextPage}`);
       const data = await res.json();
 
@@ -105,25 +75,44 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
       });
 
       setPage(nextPage);
-
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [hasMore, loading, page]);
 
   useEffect(() => {
-    setResults(Array.isArray(initialAnime) ? initialAnime : []);
-  }, [initialAnime]);
+    const el = loadMoreRef.current;
+    if (!el) return;
+    if (!hasMore || query) return;
 
-  // search จาก API
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !tickingRef.current && !loading) {
+          tickingRef.current = true;
+          loadMore().finally(() => {
+            tickingRef.current = false;
+          });
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px',
+        threshold: 0,
+      }
+    );
+
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [hasMore, query, loading, loadMore]);
+
   useEffect(() => {
     const controller = new AbortController();
 
     const fetchSearch = async () => {
       if (!debouncedQuery.trim()) {
-        // reset กลับ pagination mode
         setResults(initialAnime);
         setPage(1);
         setHasMore(true);
@@ -132,19 +121,16 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
 
       try {
         setLoading(true);
-
         const res = await fetch(
           `/api/anime/search?q=${encodeURIComponent(debouncedQuery)}`,
           { signal: controller.signal }
         );
-
         const data = await res.json();
 
         setResults(data);
-        setHasMore(false); // search ไม่มี load more
-
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
+        setHasMore(false);
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
           console.error(err);
         }
       } finally {
@@ -155,17 +141,45 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
     fetchSearch();
 
     return () => controller.abort();
-  }, [debouncedQuery]);
+  }, [debouncedQuery, initialAnime]);
 
-  const isInList = (animeListId: number) => {
-    return userList.some(entry => entry.anime.anilistId === animeListId);
-  };
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const addAnimeId = Number(searchParams.get('add'));
+    if (!addAnimeId || dialogOpen) return;
+
+    if (isInList(addAnimeId)) {
+      router.replace(pathname, { scroll: false });
+      return;
+    }
+
+    const animeToAdd = results.find(a => a.anilistId === addAnimeId) ?? getPendingAnime(addAnimeId);
+
+    if (!animeToAdd) return;
+
+    const timer = window.setTimeout(() => {
+      setSelectedAnime(animeToAdd);
+      setDialogOpen(true);
+      clearPendingAnime();
+      router.replace(pathname, { scroll: false });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [dialogOpen, isAuthenticated, isInList, pathname, results, router, searchParams]);
 
   const handleAddClick = (anime: Anime) => {
+    if (!isAuthenticated) {
+      savePendingAnime(anime);
+      router.push(`/auth?callbackUrl=${encodeURIComponent(buildAddCallbackUrl(pathname, searchParams, anime.anilistId))}`);
+      return;
+    }
+
     if (isInList(anime.anilistId)) {
       toast.info('This anime is already in your list');
       return;
     }
+
     setSelectedAnime(anime);
     setDialogOpen(true);
   };
@@ -205,8 +219,7 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
       setDialogOpen(false);
     } catch (err) {
       console.error(err);
-      const message =
-        err instanceof Error ? err.message : 'Failed to add anime';
+      const message = err instanceof Error ? err.message : 'Failed to add anime';
       toast.error(message, { id: toastId });
       throw err;
     }
@@ -220,14 +233,8 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
     return <Icon className={`w-10 h-10 ${colors[index % colors.length]}`} />;
   };
 
-  const handleOpenDetail = (anime: Anime) => {
-    setDetailAnime(anime);
-    setDetailOpen(true);
-  };
-
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Search */}
       <div className="flex gap-3 mb-8">
         <Input
           placeholder="Search anime title..."
@@ -240,39 +247,39 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
         </Button>
       </div>
 
-      {/* Label */}
       {query && (
         <p className="text-sm text-slate-400 mb-6">
-          Results for "{query}"
+          Results for &quot;{query}&quot;
         </p>
       )}
 
-      {/* Loading */}
       {loading && (
         <p className="text-center text-slate-400 mb-6">
           Searching...
         </p>
       )}
 
-      {/* Grid */}
       <div className="grid grid-cols-4 gap-6">
         {results.map((anime, index) => (
           <AnimeCard
             key={`${anime.id}-${anime.anilistId}`}
             anime={anime}
             icon={getAnimeIcon(index)}
-            onClick={() => handleOpenDetail(anime)}
+            onClick={() => {
+              setDetailAnime(anime);
+              setDetailOpen(true);
+            }}
             statusBadge={
               isInList(anime.anilistId) && (
                 <span className="px-2 py-1 bg-emerald-600 text-xs rounded">
-                  ✓ In list
+                  In list
                 </span>
               )
             }
             actionButton={
               <Button
                 onClick={(e) => {
-                  e.stopPropagation(); // ✅ กันไม่ให้ไป trigger card
+                  e.stopPropagation();
                   handleAddClick(anime);
                 }}
                 disabled={isInList(anime.anilistId)}
@@ -291,7 +298,6 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
         </div>
       )}
 
-      {/* Empty */}
       {results.length === 0 && query && !loading && (
         <div className="text-center py-12 text-slate-400">
           No results found
@@ -304,7 +310,6 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
         </div>
       )}
 
-      {/* Dialog */}
       <AddAnimeDialog
         anime={selectedAnime}
         open={dialogOpen}
@@ -321,4 +326,30 @@ export default function SearchClient({ initialAnime, initialUserList }: Props) {
       />
     </div>
   );
+}
+
+function buildAddCallbackUrl(pathname: string, searchParams: URLSearchParams, anilistId: number) {
+  const params = new URLSearchParams(searchParams.toString());
+  params.set('add', String(anilistId));
+  return `${pathname}?${params.toString()}`;
+}
+
+function savePendingAnime(anime: Anime) {
+  sessionStorage.setItem(PENDING_ANIME_KEY, JSON.stringify(anime));
+}
+
+function getPendingAnime(anilistId: number) {
+  const raw = sessionStorage.getItem(PENDING_ANIME_KEY);
+  if (!raw) return null;
+
+  try {
+    const anime = JSON.parse(raw) as Anime;
+    return anime.anilistId === anilistId ? anime : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingAnime() {
+  sessionStorage.removeItem(PENDING_ANIME_KEY);
 }
