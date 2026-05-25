@@ -10,7 +10,7 @@ interface StatusCount {
 
 // 1. กำหนดประเภทของ Status และการเรียงลำดับให้แน่นอน
 
-type SortOption = 'dateAdded' | 'score' | 'title';
+type SortOption = 'updatedAt' | 'dateAdded' | 'score' | 'title';
 type StatusFilter = AnimeStatus | 'all';
 
 // 2. สร้าง Interface สำหรับ Props
@@ -76,6 +76,7 @@ export function StatusSidebar({
                 <h3 className="text-xs uppercase text-slate-400 mb-3">Sort by</h3>
                 <div className="flex flex-col gap-1">
                     {[
+                        { value: 'updatedAt', label: 'Last updated' },
                         { value: 'dateAdded', label: 'Date added' },
                         { value: 'score', label: 'My score' },
                         { value: 'title', label: 'Title A-Z' },

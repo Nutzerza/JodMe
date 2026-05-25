@@ -14,7 +14,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json([], { status: 200 });
   }
 
-  const list = await fetchUserAnimeListByUserId(userId);
+  const { searchParams } = new URL(req.url);
+
+  const page = Number(searchParams.get("page") || 1);
+  const limit = Number(searchParams.get("limit") || 20);
+
+  const list = await fetchUserAnimeListByUserId({userId, page, limit});
   return NextResponse.json(list);
 }
 

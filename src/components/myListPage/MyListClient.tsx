@@ -1,10 +1,22 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AnimeStatus, UserAnimeEntry } from '@/types/anime';
 import { StatusSidebar } from '@/components/StatusSidebar';
 import { AnimeListItem } from '@/components/AnimeCard';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { useDebounce } from '@/hooks/useDebounce';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 type UpdatePayload = {
   progress?: number;
@@ -12,21 +24,27 @@ type UpdatePayload = {
   score?: number | null;
 };
 
-export default function MyListClient({ initialList }: { initialList: UserAnimeEntry[] }) {
-  const [animeList, setAnimeList] = useState<UserAnimeEntry[]>(initialList);
+export default function MyListClient() {
+  // const [animeList, setAnimeList] = useState<UserAnimeEntry[]>(initialList);
   const [activeStatus, setActiveStatus] = useState<AnimeStatus | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'dateAdded' | 'score' | 'title'>('dateAdded');
+  const [sortBy, setSortBy] = useState<'updatedAt' | 'dateAdded' | 'score' | 'title'>('updatedAt');
+  const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 400);
+  const [results, setResults] = useState<UserAnimeEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // ✅ stats
+  // stats
   const stats = useMemo(() => {
-    const totalAnime = animeList.length;
+    const totalAnime = results.length;
 
-    const episodesWatched = animeList.reduce(
+    const episodesWatched = results.reduce(
       (sum, e) => sum + e.progress,
       0
     );
 
-    const scored = animeList.filter(e => e.score !== null);
+    const scored = results.filter(e => e.score !== null);
 
     const avgScore =
       scored.length > 0
@@ -38,38 +56,65 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
       episodesWatched,
       avgScore: avgScore.toFixed(1),
     };
-  }, [animeList]);
+  }, [results]);
 
-  // ✅ status count
+  // status count
   const statusCounts = [
-    { status: 'all' as const, label: 'All', count: animeList.length },
-    { status: 'watching' as const, label: 'Watching', count: animeList.filter(e => e.status === 'watching').length },
-    { status: 'completed' as const, label: 'Completed', count: animeList.filter(e => e.status === 'completed').length },
-    { status: 'on_hold' as const, label: 'On Hold', count: animeList.filter(e => e.status === 'on_hold').length },
-    { status: 'dropped' as const, label: 'Dropped', count: animeList.filter(e => e.status === 'dropped').length },
-    { status: 'plan_to_watch' as const, label: 'Plan', count: animeList.filter(e => e.status === 'plan_to_watch').length },
+    { status: 'all' as const, label: 'All', count: results.length },
+    { status: 'watching' as const, label: 'Watching', count: results.filter(e => e.status === 'watching').length },
+    { status: 'completed' as const, label: 'Completed', count: results.filter(e => e.status === 'completed').length },
+    { status: 'on_hold' as const, label: 'On Hold', count: results.filter(e => e.status === 'on_hold').length },
+    { status: 'dropped' as const, label: 'Dropped', count: results.filter(e => e.status === 'dropped').length },
+    { status: 'plan_to_watch' as const, label: 'Plan', count: results.filter(e => e.status === 'plan_to_watch').length },
   ];
 
-  // ✅ filter + sort
-  const filtered = useMemo(() => {
-    const list =
-      activeStatus === 'all'
-        ? animeList
-        : animeList.filter(e => e.status === activeStatus);
+  useEffect(() => {
+    const controller = new AbortController();
 
-    return [...list].sort((a, b) => {
-      if (sortBy === 'score') return (b.score ?? 0) - (a.score ?? 0);
-      if (sortBy === 'title') return a.anime.title.localeCompare(b.anime.title);
-      return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
-    });
-  }, [animeList, activeStatus, sortBy]);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
 
-  const handleUpdate = async (animeListId: number, data: UpdatePayload) => {
-    const prevState = animeList;
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: '10',
+          q: debouncedQuery,
+          status: activeStatus,
+          sort: sortBy,
+        });
 
-    setAnimeList((prev) =>
+        const res = await fetch(`/api/userList/search?${params}`, {
+          signal: controller.signal,
+        });
+
+        const data = await res.json();
+
+        setResults(data.data);
+        setTotalPages(data.meta.totalPages);
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error(err);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    return () => controller.abort();
+  }, [page, debouncedQuery, sortBy, activeStatus]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, activeStatus, sortBy]);
+
+  const handleUpdate = async (resultsId: number, data: UpdatePayload) => {
+    const prevState = results;
+
+    setResults((prev) =>
       prev.map((e) =>
-        e.anime.anilistId === animeListId ? { ...e, ...data } : e
+        e.anime.anilistId === resultsId ? { ...e, ...data } : e
       )
     );
 
@@ -80,7 +125,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          animeListId,
+          resultsId,
           ...data,
         }),
       });
@@ -90,20 +135,20 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
       }
     } catch (err) {
       console.error(err);
-      setAnimeList(prevState);
+      setResults(prevState);
       toast.error('Failed to update');
     }
   };
 
-  const handleRemove = async (animeListId: number, title: string) => {
-    const prevState = animeList;
+  const handleRemove = async (resultsId: number, title: string) => {
+    const prevState = results;
     const toastId = toast.loading(`Removing "${title}"...`);
 
-    setAnimeList((prev) => prev.filter((e) => e.anime.anilistId !== animeListId));
+    setResults((prev) => prev.filter((e) => e.anime.anilistId !== resultsId));
 
     try {
       const res = await fetch(
-        `/api/userList?animeListId=${animeListId}`,
+        `/api/userList?resultsId=${resultsId}`,
         { method: 'DELETE' }
       );
 
@@ -115,7 +160,7 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
       toast.success(`Removed "${title}"`, { id: toastId });
     } catch (err) {
       console.error(err);
-      setAnimeList(prevState);
+      setResults(prevState);
       const message =
         err instanceof Error ? err.message : 'Failed to remove';
       toast.error(message, { id: toastId });
@@ -140,9 +185,21 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
           <Stat label="Avg Score" value={stats.avgScore} />
         </div>
 
+        <div className="flex gap-3 mb-8">
+          <Input
+            placeholder="Search anime title..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1 bg-slate-800 border-slate-700 h-12 text-base"
+          />
+          <Button className="bg-purple-600 px-8 h-12">
+            Search
+          </Button>
+        </div>
+
         {/* List */}
         <div className="flex flex-col gap-3">
-          {filtered.map((entry) => (
+          {results.map((entry) => (
             <AnimeListItem
               key={entry.anime.id}
               anime={entry.anime}
@@ -154,6 +211,55 @@ export default function MyListClient({ initialList }: { initialList: UserAnimeEn
             />
           ))}
         </div>
+
+        {results.length === 0 && query && !loading && (
+          <div className="text-center py-12 text-slate-400">
+            No results found
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <Pagination>
+            <PaginationContent>
+
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page > 1) setPage(page - 1);
+                  }}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    href="#"
+                    isActive={p === page}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage(p);
+                    }}
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page < totalPages) setPage(page + 1);
+                  }}
+                />
+              </PaginationItem>
+
+            </PaginationContent>
+          </Pagination>
+        )}
       </div>
     </div>
   );
