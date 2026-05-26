@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AnimeStatus, UserAnimeEntry } from '@/types/anime';
 import { StatusSidebar } from '@/components/StatusSidebar';
+import { AnimeListSkeleton } from '@/components/skeletons/AnimeListSkeleton';
 import { AnimeListItem } from '@/components/AnimeCard';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -34,39 +35,11 @@ export default function MyListClient() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  // stats
-  const stats = useMemo(() => {
-    const totalAnime = results.length;
-
-    const episodesWatched = results.reduce(
-      (sum, e) => sum + e.progress,
-      0
-    );
-
-    const scored = results.filter(e => e.score !== null);
-
-    const avgScore =
-      scored.length > 0
-        ? scored.reduce((sum, e) => sum + e.score!, 0) / scored.length
-        : 0;
-
-    return {
-      totalAnime,
-      episodesWatched,
-      avgScore: avgScore.toFixed(1),
-    };
-  }, [results]);
-
-  // status count
-  const statusCounts = [
-    { status: 'all' as const, label: 'All', count: results.length },
-    { status: 'watching' as const, label: 'Watching', count: results.filter(e => e.status === 'watching').length },
-    { status: 'completed' as const, label: 'Completed', count: results.filter(e => e.status === 'completed').length },
-    { status: 'on_hold' as const, label: 'On Hold', count: results.filter(e => e.status === 'on_hold').length },
-    { status: 'dropped' as const, label: 'Dropped', count: results.filter(e => e.status === 'dropped').length },
-    { status: 'plan_to_watch' as const, label: 'Plan', count: results.filter(e => e.status === 'plan_to_watch').length },
-  ];
+  const [stats, setStats] = useState({
+    totalEntries: 0,
+    totalProgress: 0,
+    averageScore: 0,
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -91,6 +64,7 @@ export default function MyListClient() {
 
         setResults(data.data);
         setTotalPages(data.meta.totalPages);
+        setStats(data.stats);
       } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
           console.error(err);
@@ -170,7 +144,6 @@ export default function MyListClient() {
   return (
     <div className="flex gap-8">
       <StatusSidebar
-        statusCounts={statusCounts}
         activeStatus={activeStatus}
         onStatusChange={setActiveStatus}
         sortBy={sortBy}
@@ -180,9 +153,9 @@ export default function MyListClient() {
       <div className="flex-1">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <Stat label="Total" value={stats.totalAnime} />
-          <Stat label="Episodes" value={stats.episodesWatched} />
-          <Stat label="Avg Score" value={stats.avgScore} />
+          <Stat label="Total" value={stats.totalEntries} />
+          <Stat label="Episodes" value={stats.totalProgress} />
+          <Stat label="Avg Score" value={stats.averageScore} />
         </div>
 
         <div className="flex gap-3 mb-8">
@@ -198,19 +171,25 @@ export default function MyListClient() {
         </div>
 
         {/* List */}
-        <div className="flex flex-col gap-3">
-          {results.map((entry) => (
-            <AnimeListItem
-              key={entry.anime.id}
-              anime={entry.anime}
-              progress={entry.progress}
-              score={entry.score}
-              status={entry.status}
-              onUpdate={(data) => handleUpdate(entry.anime.anilistId, data)}
-              onRemove={() => handleRemove(entry.anime.anilistId, entry.anime.title)}
-            />
-          ))}
-        </div>
+        {
+          loading ? (
+            <AnimeListSkeleton />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {results.map((entry) => (
+                <AnimeListItem
+                  key={entry.anime.id}
+                  anime={entry.anime}
+                  progress={entry.progress}
+                  score={entry.score}
+                  status={entry.status}
+                  onUpdate={(data) => handleUpdate(entry.anime.anilistId, data)}
+                  onRemove={() => handleRemove(entry.anime.anilistId, entry.anime.title)}
+                />
+              ))}
+            </div>
+          )
+        }
 
         {results.length === 0 && query && !loading && (
           <div className="text-center py-12 text-slate-400">
