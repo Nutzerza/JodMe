@@ -93,7 +93,7 @@ export default function MyListClient() {
     );
 
     try {
-      const res = await fetch('/api/userList', {
+      const res = await fetch('/api/userList/list', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ export default function MyListClient() {
 
     try {
       const res = await fetch(
-        `/api/userList?resultsId=${resultsId}`,
+        `/api/userList/list?resultsId=${resultsId}`,
         { method: 'DELETE' }
       );
 

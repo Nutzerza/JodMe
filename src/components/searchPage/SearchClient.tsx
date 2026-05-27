@@ -195,7 +195,7 @@ export default function SearchClient({ initialAnime, initialUserList, isAuthenti
     const toastId = toast.loading(`Adding "${title}"...`);
 
     try {
-      const res = await fetch('/api/userList', {
+      const res = await fetch('/api/userList/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -211,7 +211,7 @@ export default function SearchClient({ initialAnime, initialUserList, isAuthenti
         throw new Error(data.error ?? 'Failed to add anime');
       }
 
-      const updatedListRes = await fetch('/api/userList');
+      const updatedListRes = await fetch('/api/userList/list');
       const updatedList = await updatedListRes.json();
       setUserList(updatedList);
 
