@@ -213,7 +213,8 @@ export default function SearchClient({ initialAnime, initialUserList, isAuthenti
 
       const updatedListRes = await fetch('/api/userList/list');
       const updatedList = await updatedListRes.json();
-      setUserList(updatedList);
+
+      setUserList(updatedList.data ?? []);
 
       toast.success(`Added "${title}"`, { id: toastId });
       setDialogOpen(false);

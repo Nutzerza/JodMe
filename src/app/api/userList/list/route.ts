@@ -30,7 +30,6 @@ export async function POST(req: NextRequest) {
     const userId = await getUserFromToken(req);
 
     const { animeListId, status, progress, score } = body;
-
     if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" },

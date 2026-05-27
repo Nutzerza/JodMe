@@ -145,7 +145,7 @@ export default function SeasonClient({
 
       const updatedListRes = await fetch('/api/userList/list');
       const updatedList = await updatedListRes.json();
-      setUserList(updatedList);
+      setUserList(updatedList.data ?? []);
 
       toast.success(`Added "${title}"`, { id: toastId });
       setDialogOpen(false);

@@ -48,7 +48,6 @@ export function StatusSidebar({
         });
 
         const data = await res.json();
-        console.log('Status counts:', data);
 
         const formattedData: StatusCount[] = [
           { status: 'all', label: 'All', count: data.watching + data.completed + data.on_hold + data.dropped + data.plan_to_watch },

@@ -83,12 +83,12 @@ export default function MyListClient() {
     setPage(1);
   }, [debouncedQuery, activeStatus, sortBy]);
 
-  const handleUpdate = async (resultsId: number, data: UpdatePayload) => {
+  const handleUpdate = async (animeListId: number, data: UpdatePayload) => {
     const prevState = results;
 
     setResults((prev) =>
       prev.map((e) =>
-        e.anime.anilistId === resultsId ? { ...e, ...data } : e
+        e.anime.anilistId === animeListId ? { ...e, ...data } : e
       )
     );
 
@@ -99,7 +99,7 @@ export default function MyListClient() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          resultsId,
+          animeListId,
           ...data,
         }),
       });
@@ -114,15 +114,15 @@ export default function MyListClient() {
     }
   };
 
-  const handleRemove = async (resultsId: number, title: string) => {
+  const handleRemove = async (animeListId: number, title: string) => {
     const prevState = results;
     const toastId = toast.loading(`Removing "${title}"...`);
 
-    setResults((prev) => prev.filter((e) => e.anime.anilistId !== resultsId));
+    setResults((prev) => prev.filter((e) => e.anime.anilistId !== animeListId));
 
     try {
       const res = await fetch(
-        `/api/userList/list?resultsId=${resultsId}`,
+        `/api/userList/list?animeListId=${animeListId}`,
         { method: 'DELETE' }
       );
 
