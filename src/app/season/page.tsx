@@ -1,10 +1,10 @@
 import { getServerSession } from 'next-auth';
 import PublicNavbar from '@/components/PublicNavbar';
 import SeasonClient from '@/components/seasonPage/SeasonClient';
-import { authOptions } from '@/lib/authOptions';
+import { authOptions } from '@/features/auth/lib/authOptions';
 import { getSeasonAnime } from '@/lib/services/animeService';
 import { fetchUserAnimeListByEmail } from '@/lib/services/userAnimeService';
-import { getCurrentSeason } from '@/utils/getCurrentSeason';
+import { getCurrentSeason } from '@/shared/utils/getCurrentSeason';
 import { Anime } from '@/types/anime';
 
 export default async function PublicSeasonPage() {

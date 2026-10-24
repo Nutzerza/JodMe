@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Season, SEASON_ORDER } from "@/types/anime";
-import { getCurrentSeason } from "@/utils/getCurrentSeason";
+import { getCurrentSeason } from "@/shared/utils/getCurrentSeason";
 import type { Prisma } from "@prisma/client";
 
 type AniListMedia = {

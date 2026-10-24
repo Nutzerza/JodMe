@@ -7,8 +7,8 @@ import { toast } from 'sonner';
 import { AddAnimeDialog } from '@/components/AddAnimeDialog';
 import { AnimeCard } from '@/components/AnimeCard';
 import AnimeDetailDialog from '@/components/AnimeDetailDialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
 import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
 
 const PENDING_ANIME_KEY = 'jodme_pending_anime';

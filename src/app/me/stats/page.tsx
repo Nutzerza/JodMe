@@ -1,5 +1,5 @@
 import StatsClient from '@/components/statPage/StatsClient';
-import { authOptions } from '@/lib/authOptions';
+import { authOptions } from '@/features/auth/lib/authOptions';
 import { fetchUserAnimeListByEmail } from '@/lib/services/userAnimeService';
 import {
   fetchMonthlyWatchStatsByEmail,

@@ -7,10 +7,10 @@ import { toast } from 'sonner';
 import { AddAnimeDialog } from '@/components/AddAnimeDialog';
 import { AnimeCard } from '@/components/AnimeCard';
 import AnimeDetailDialog from '@/components/AnimeDetailDialog';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/shared/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
-import { getNextSeason, getPrevSeason, seasons } from '@/utils/seasonUtils';
+import { getNextSeason, getPrevSeason, seasons } from '@/shared/utils/seasonUtils';
 
 const PENDING_ANIME_KEY = 'jodme_pending_anime';
 

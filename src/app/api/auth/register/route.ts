@@ -1,67 +1,96 @@
 // app/api/auth/register/route.ts
-import bcrypt from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
-import { NextRequest, NextResponse } from 'next/server';
-import { registerSchema } from "@/lib/validators/auth";
+
+import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import { registerApiSchema } from "@/features/auth/schema/register";
 
 export async function POST(req: NextRequest) {
+  // 1. Parse JSON
+  let body: unknown;
+
   try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
+  }
 
-    const { username, email, password } = await req.json();
+  // 2. Validate input
+  const result = registerApiSchema.safeParse(body);
 
-    if (!username || !email || !password) {
-      return NextResponse.json(
-        { message: 'Missing fields' },
-        { status: 400 }
-      );
-    }
+  if (!result.success) {
+    return NextResponse.json(
+      {
+        message: "Validation failed",
+        errors: result.error.flatten().fieldErrors,
+      },
+      { status: 400 },
+    );
+  }
 
-    const result = registerSchema.safeParse({
-      username: username,
-      email: email,
-      password: password,
-      confirm: password,
-    });
+  try {
+    const { username, email, password } = result.data;
 
-    if (!result.success) {
-      return NextResponse.json(
-        { message: "Invalid input" },
-        { status: 400 }
-      );
-    }
-
+    // 3. Normalize input
     const emailNormalized = email.trim().toLowerCase();
     const usernameNormalized = username.trim().toLowerCase();
+
+    // 4. Check duplicate user
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: emailNormalized }, { username: usernameNormalized }],
+      },
+      select: { id: true },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { message: "Email or username already exists" },
+        { status: 409 },
+      );
+    }
+
+    // 5. Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    try {
-      await prisma.user.create({
-        data: {
-          username: usernameNormalized,
-          email: emailNormalized,
-          passwordHash: hashedPassword,
+    // 6. Create User + MapUserUid
+    await prisma.user.create({
+      data: {
+        username: usernameNormalized,
+        email: emailNormalized,
+        passwordHash: hashedPassword,
+        mapUserUid: {
+          create: {
+            uid: randomUUID(),
+          },
         },
-      });
+      },
+    });
 
-      return NextResponse.json(
-        {
-          message: 'Register success',
-        },
-        { status: 201 }
-      );
-    } catch (err: any) {
-      if (err.code === 'P2002') {
-        return NextResponse.json(
-          { message: 'ไม่สามารถสมัครได้' },
-          { status: 400 }
-        );
-      }
-      throw err;
-    }
-  } catch (err) {
     return NextResponse.json(
-      { message: 'Server error' },
-      { status: 500 }
+      { message: "Registration successful" },
+      { status: 201 },
+    );
+  } catch (err: unknown) {
+    // 7. Handle unique constraint conflicts
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { message: "Email or username already exists" },
+        { status: 409 },
+      );
+    }
+
+    // 8. Log internal errors only on the server
+    console.error("Registration error:", err);
+
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 },
     );
   }
 }

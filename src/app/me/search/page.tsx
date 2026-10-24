@@ -5,7 +5,7 @@ import SearchClient from '@/components/searchPage/SearchClient';
 import { Anime } from '@/types/anime';
 import { fetchUserAnimeListByEmail } from '@/lib/services/userAnimeService';
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { authOptions } from "@/features/auth/lib/authOptions";
 
 export default async function SearchPage() {
   const data = await getAllAnime(1, 10) as Anime[];

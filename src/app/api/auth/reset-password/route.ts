@@ -1,8 +1,9 @@
-// app/api/auth/reset-password/route.ts
-import { prisma } from '@/lib/prisma';
-import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
+// API route for handling password reset requests using the provided token
+import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+// Import necessary modules for cryptographic operations and password hashing
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,10 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Invalid" }, { status: 400 });
     }
 
-    const hashedToken = crypto
-      .createHash("sha256")
-      .update(token)
-      .digest("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await prisma.user.findFirst({
       where: {
@@ -28,8 +26,8 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { message: "Token ไม่ถูกต้องหรือหมดอายุ" },
-        { status: 400 }
+        { message: "Token is invalid or expired" },
+        { status: 400 },
       );
     }
 
@@ -45,11 +43,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ message: "Success" });
-
   } catch {
-    return NextResponse.json(
-      { message: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }

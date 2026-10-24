@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useEffect } from 'react';
-import { toast } from 'sonner';
-import { AnimeStatus, UserAnimeEntry } from '@/types/anime';
-import { StatusSidebar } from '@/components/StatusSidebar';
-import { AnimeListSkeleton } from '@/components/skeletons/AnimeListSkeleton';
-import { AnimeListItem } from '@/components/AnimeCard';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useState, useMemo, useEffect } from "react";
+import { toast } from "sonner";
+import { AnimeStatus, UserAnimeEntry } from "@/types/anime";
+import { StatusSidebar } from "@/components/StatusSidebar";
+import { AnimeListSkeleton } from "@/components/skeletons/AnimeListSkeleton";
+import { AnimeListItem } from "@/components/AnimeCard";
+import { Button } from "../../shared/components/ui/button";
+import { Input } from "../../shared/components/ui/input";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 import {
   Pagination,
   PaginationContent,
@@ -17,7 +17,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"
+} from "@/shared/components/ui/pagination";
 
 type UpdatePayload = {
   progress?: number;
@@ -27,9 +27,11 @@ type UpdatePayload = {
 
 export default function MyListClient() {
   // const [animeList, setAnimeList] = useState<UserAnimeEntry[]>(initialList);
-  const [activeStatus, setActiveStatus] = useState<AnimeStatus | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'updatedAt' | 'dateAdded' | 'score' | 'title'>('updatedAt');
-  const [query, setQuery] = useState('');
+  const [activeStatus, setActiveStatus] = useState<AnimeStatus | "all">("all");
+  const [sortBy, setSortBy] = useState<
+    "updatedAt" | "dateAdded" | "score" | "title"
+  >("updatedAt");
+  const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 400);
   const [results, setResults] = useState<UserAnimeEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ export default function MyListClient() {
 
         const params = new URLSearchParams({
           page: String(page),
-          limit: '10',
+          limit: "10",
           q: debouncedQuery,
           status: activeStatus,
           sort: sortBy,
@@ -66,7 +68,7 @@ export default function MyListClient() {
         setTotalPages(data.meta.totalPages);
         setStats(data.stats);
       } catch (err) {
-        if (err instanceof Error && err.name !== 'AbortError') {
+        if (err instanceof Error && err.name !== "AbortError") {
           console.error(err);
         }
       } finally {
@@ -88,15 +90,15 @@ export default function MyListClient() {
 
     setResults((prev) =>
       prev.map((e) =>
-        e.anime.anilistId === animeListId ? { ...e, ...data } : e
-      )
+        e.anime.anilistId === animeListId ? { ...e, ...data } : e,
+      ),
     );
 
     try {
-      const res = await fetch('/api/userList/list', {
-        method: 'POST',
+      const res = await fetch("/api/userList/list", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           animeListId,
@@ -105,12 +107,12 @@ export default function MyListClient() {
       });
 
       if (!res.ok) {
-        throw new Error('API failed');
+        throw new Error("API failed");
       }
     } catch (err) {
       console.error(err);
       setResults(prevState);
-      toast.error('Failed to update');
+      toast.error("Failed to update");
     }
   };
 
@@ -121,22 +123,20 @@ export default function MyListClient() {
     setResults((prev) => prev.filter((e) => e.anime.anilistId !== animeListId));
 
     try {
-      const res = await fetch(
-        `/api/userList/list?animeListId=${animeListId}`,
-        { method: 'DELETE' }
-      );
+      const res = await fetch(`/api/userList/list?animeListId=${animeListId}`, {
+        method: "DELETE",
+      });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? 'Failed to remove');
+        throw new Error(data.error ?? "Failed to remove");
       }
 
       toast.success(`Removed "${title}"`, { id: toastId });
     } catch (err) {
       console.error(err);
       setResults(prevState);
-      const message =
-        err instanceof Error ? err.message : 'Failed to remove';
+      const message = err instanceof Error ? err.message : "Failed to remove";
       toast.error(message, { id: toastId });
     }
   };
@@ -165,31 +165,29 @@ export default function MyListClient() {
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 bg-slate-800 border-slate-700 h-12 text-base"
           />
-          <Button className="bg-purple-600 px-8 h-12">
-            Search
-          </Button>
+          <Button className="bg-purple-600 px-8 h-12">Search</Button>
         </div>
 
         {/* List */}
-        {
-          loading ? (
-            <AnimeListSkeleton />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {results.map((entry) => (
-                <AnimeListItem
-                  key={entry.anime.id}
-                  anime={entry.anime}
-                  progress={entry.progress}
-                  score={entry.score}
-                  status={entry.status}
-                  onUpdate={(data) => handleUpdate(entry.anime.anilistId, data)}
-                  onRemove={() => handleRemove(entry.anime.anilistId, entry.anime.title)}
-                />
-              ))}
-            </div>
-          )
-        }
+        {loading ? (
+          <AnimeListSkeleton />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {results.map((entry) => (
+              <AnimeListItem
+                key={entry.anime.id}
+                anime={entry.anime}
+                progress={entry.progress}
+                score={entry.score}
+                status={entry.status}
+                onUpdate={(data) => handleUpdate(entry.anime.anilistId, data)}
+                onRemove={() =>
+                  handleRemove(entry.anime.anilistId, entry.anime.title)
+                }
+              />
+            ))}
+          </div>
+        )}
 
         {results.length === 0 && query && !loading && (
           <div className="text-center py-12 text-slate-400">
@@ -200,7 +198,6 @@ export default function MyListClient() {
         {totalPages > 1 && (
           <Pagination>
             <PaginationContent>
-
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
@@ -235,7 +232,6 @@ export default function MyListClient() {
                   }}
                 />
               </PaginationItem>
-
             </PaginationContent>
           </Pagination>
         )}

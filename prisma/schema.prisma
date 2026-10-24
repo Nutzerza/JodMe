@@ -21,25 +21,40 @@ enum AnimeStatus {
   ON_HOLD
 }
 
+model MapUserUid {
+  id  Int    @unique
+  uid String @unique
+
+  user User @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
+model MapAnimeUid {
+  id  Int    @unique
+  uid String @unique
+
+  anime Anime @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
 model User {
-  id               String      @id @default(cuid())
-  username         String?     @unique
-  email            String      @unique
-  image            String?
-  passwordHash     String?
-  
+  id           Int     @id @default(autoincrement())
+  username     String? @unique
+  email        String  @unique
+  image        String?
+  passwordHash String?
+
   resetToken       String?
   resetTokenExpiry DateTime?
 
-  animeList        UserAnime[]
-  watchHistory     WatchHistory[]
+  animeList  UserAnime[]
+  mapUserUid MapUserUid?
 
-  createdAt        DateTime    @default(now())
+  createdAt    DateTime       @default(now())
+  watchHistory WatchHistory[]
 }
 
 model Anime {
-  id        String @id @default(cuid())
-  anilistId Int    @unique
+  id        Int @id @default(autoincrement())
+  anilistId Int @unique
 
   title        String
   description  String? @db.Text
@@ -59,15 +74,18 @@ model Anime {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 
-  users UserAnime[]
+  users        UserAnime[]
+  mapAnimeUid  MapAnimeUid?
   watchHistory WatchHistory[]
+
+  @@index([anilistId])
 }
 
 model UserAnime {
-  id String @id @default(cuid())
+  // id Int @id @default(autoincrement())
 
-  userId  String
-  animeId String
+  userId  Int
+  animeId Int
 
   status   AnimeStatus @default(PLANNING)
   score    Int?
@@ -82,16 +100,16 @@ model UserAnime {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   anime Anime @relation(fields: [animeId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, animeId])
+  @@id([userId, animeId])
 }
 
 model WatchHistory {
-  id String @id @default(cuid())
+  id Int @id @default(autoincrement())
 
-  userId  String
-  animeId String
+  userId  Int
+  animeId Int
 
-  episode Int
+  episode   Int
   watchedAt DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -1,8 +1,8 @@
-import { ReactNode } from 'react';
-import Sidebar from '@/components/Navbar';
-import UserMenu from '@/components/UserMenu';
+import { ReactNode } from "react";
+// import Sidebar from "@/shared/components/Navbar";
+import UserMenu from "@/components/UserMenu";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { authOptions } from "@/features/auth/lib/authOptions";
 import { redirect } from "next/navigation";
 
 interface Props {
@@ -10,7 +10,6 @@ interface Props {
 }
 
 export default async function Layout({ children }: Props) {
-
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.name) {
@@ -23,16 +22,14 @@ export default async function Layout({ children }: Props) {
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-8">
             <h1 className="text-2xl font-bold">JodMe</h1>
-            <Sidebar username={session.user.name} />
+            {/* <Sidebar username={session.user.name} /> */}
           </div>
 
-          <UserMenu username={session.user.name} />
+          {/* <UserMenu username={session.user.name} /> */}
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8">
-        {children}
-      </main>
+      <main className="container mx-auto px-6 py-8">{children}</main>
     </div>
   );
 }

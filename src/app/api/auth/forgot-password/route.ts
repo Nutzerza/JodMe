@@ -1,15 +1,17 @@
-// app/api/auth/forgot-password/route.ts
-import { prisma } from '@/lib/prisma';
-import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { sendResetEmail } from "@/lib/email";
+// API route for handling forget password requests and sending reset emails
+import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+// Import the function for sending reset emails
+import { sendResetEmail } from "@/features/auth/lib/email";
+// Import the crypto library for generating secure tokens
+import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
     const { email } = await req.json();
 
     if (!email) {
-      return NextResponse.json({ message: "OK" }); //ไม่บอก error
+      return NextResponse.json({ message: "OK" });
     }
 
     const emailNormalized = email.toLowerCase();
@@ -34,13 +36,12 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`;
+      const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password/${token}`;
 
       await sendResetEmail(emailNormalized, resetLink);
     }
 
     return NextResponse.json({ message: "If email exists, link sent" });
-
   } catch {
     return NextResponse.json({ message: "OK" });
   }

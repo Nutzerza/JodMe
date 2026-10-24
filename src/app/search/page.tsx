@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import PublicNavbar from '@/components/PublicNavbar';
 import SearchClient from '@/components/searchPage/SearchClient';
-import { authOptions } from '@/lib/authOptions';
+import { authOptions } from '@/features/auth/lib/authOptions';
 import { getAllAnime } from '@/lib/services/animeService';
 import { fetchUserAnimeListByEmail } from '@/lib/services/userAnimeService';
 import { Anime } from '@/types/anime';
