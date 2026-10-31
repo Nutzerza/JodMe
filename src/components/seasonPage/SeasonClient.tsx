@@ -1,23 +1,40 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Circle, Diamond, Hexagon, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
-import { AddAnimeDialog } from '@/components/AddAnimeDialog';
-import { AnimeCard } from '@/components/AnimeCard';
-import AnimeDetailDialog from '@/components/AnimeDetailDialog';
-import { Button } from '@/shared/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
-import { Anime, AnimeStatus, UserAnimeEntry } from '@/types/anime';
-import { getNextSeason, getPrevSeason, seasons } from '@/shared/utils/seasonUtils';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Diamond,
+  Hexagon,
+  Sparkles,
+} from "lucide-react";
+import { toast } from "sonner";
+import { AddAnimeDialog } from "@/shared/components/AddAnimeDialog";
+import { AnimeCard } from "@/shared/components/AnimeCard";
+import AnimeDetailDialog from "@/shared/components/AnimeDetailDialog";
+import { Button } from "@/shared/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import { Anime, AnimeStatus, UserAnimeEntry } from "@/types/anime";
+import {
+  getNextSeason,
+  getPrevSeason,
+  seasons,
+} from "@/features/anime/animeSeason/utils/seasonUtils";
 
-const PENDING_ANIME_KEY = 'jodme_pending_anime';
+const PENDING_ANIME_KEY = "jodme_pending_anime";
 
 interface Props {
   initialAnime: Anime[];
   initialUserList: UserAnimeEntry[];
-  initialSeason: typeof seasons[number];
+  initialSeason: (typeof seasons)[number];
   initialYear: number;
   isAuthenticated?: boolean;
 }
@@ -33,13 +50,13 @@ export default function SeasonClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [season, setSeason] = useState<typeof seasons[number]>(initialSeason);
+  const [season, setSeason] = useState<(typeof seasons)[number]>(initialSeason);
   const [year, setYear] = useState(initialYear);
   const [anime, setAnime] = useState<Anime[]>(initialAnime);
   const [loading, setLoading] = useState(false);
   const [detailAnime, setDetailAnime] = useState<Anime | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState("all");
   const [userList, setUserList] = useState<UserAnimeEntry[]>(initialUserList);
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -50,7 +67,9 @@ export default function SeasonClient({
     const fetchSeason = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/anime/season?season=${season}&year=${year}`);
+        const res = await fetch(
+          `/api/anime/season?season=${season}&year=${year}`,
+        );
         const data = await res.json();
         setAnime(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -64,21 +83,24 @@ export default function SeasonClient({
   }, [season, year, initialSeason, initialYear]);
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return anime;
+    if (filter === "all") return anime;
 
-    return anime.filter(a =>
-      a.genres?.some(g => g.toLowerCase() === filter)
+    return anime.filter((a) =>
+      a.genres?.some((g) => g.toLowerCase() === filter),
     );
   }, [filter, anime]);
 
-  const isInList = useCallback((animeListId: number) => {
-    return userList.some(entry => entry.anime.anilistId === animeListId);
-  }, [userList]);
+  const isInList = useCallback(
+    (animeListId: number) => {
+      return userList.some((entry) => entry.anime.anilistId === animeListId);
+    },
+    [userList],
+  );
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const addAnimeId = Number(searchParams.get('add'));
+    const addAnimeId = Number(searchParams.get("add"));
     if (!addAnimeId || dialogOpen) return;
 
     if (isInList(addAnimeId)) {
@@ -86,7 +108,9 @@ export default function SeasonClient({
       return;
     }
 
-    const animeToAdd = anime.find(a => a.anilistId === addAnimeId) ?? getPendingAnime(addAnimeId);
+    const animeToAdd =
+      anime.find((a) => a.anilistId === addAnimeId) ??
+      getPendingAnime(addAnimeId);
 
     if (!animeToAdd) return;
 
@@ -98,17 +122,27 @@ export default function SeasonClient({
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [anime, dialogOpen, isAuthenticated, isInList, pathname, router, searchParams]);
+  }, [
+    anime,
+    dialogOpen,
+    isAuthenticated,
+    isInList,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   const handleAddClick = (animeItem: Anime) => {
     if (!isAuthenticated) {
       savePendingAnime(animeItem);
-      router.push(`/auth?callbackUrl=${encodeURIComponent(buildAddCallbackUrl(pathname, searchParams, animeItem.anilistId))}`);
+      router.push(
+        `/auth?callbackUrl=${encodeURIComponent(buildAddCallbackUrl(pathname, searchParams, animeItem.anilistId))}`,
+      );
       return;
     }
 
     if (isInList(animeItem.anilistId)) {
-      toast.info('This anime is already in your list');
+      toast.info("This anime is already in your list");
       return;
     }
 
@@ -119,7 +153,7 @@ export default function SeasonClient({
   const handleAdd = async (
     status: AnimeStatus,
     progress: number,
-    score: number | null
+    score: number | null,
   ) => {
     if (!selectedAnime) return;
 
@@ -127,9 +161,9 @@ export default function SeasonClient({
     const toastId = toast.loading(`Adding "${title}"...`);
 
     try {
-      const res = await fetch('/api/userList/list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/userList/list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           animeListId: selectedAnime.anilistId,
           status,
@@ -140,10 +174,10 @@ export default function SeasonClient({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? 'Failed to add anime');
+        throw new Error(data.error ?? "Failed to add anime");
       }
 
-      const updatedListRes = await fetch('/api/userList/list');
+      const updatedListRes = await fetch("/api/userList/list");
       const updatedList = await updatedListRes.json();
       setUserList(updatedList.data ?? []);
 
@@ -151,7 +185,8 @@ export default function SeasonClient({
       setDialogOpen(false);
     } catch (err) {
       console.error(err);
-      const message = err instanceof Error ? err.message : 'Failed to add anime';
+      const message =
+        err instanceof Error ? err.message : "Failed to add anime";
       toast.error(message, { id: toastId });
       throw err;
     }
@@ -160,7 +195,12 @@ export default function SeasonClient({
   const getAnimeIcon = (index: number) => {
     const icons = [Sparkles, Circle, Diamond, Hexagon];
     const Icon = icons[index % icons.length];
-    const colors = ['text-emerald-400', 'text-purple-400', 'text-amber-400', 'text-blue-400'];
+    const colors = [
+      "text-emerald-400",
+      "text-purple-400",
+      "text-amber-400",
+      "text-blue-400",
+    ];
 
     return <Icon className={`w-10 h-10 ${colors[index % colors.length]}`} />;
   };
@@ -210,9 +250,7 @@ export default function SeasonClient({
       </div>
 
       {loading && (
-        <p className="text-center text-slate-400 mb-6">
-          Loading season...
-        </p>
+        <p className="text-center text-slate-400 mb-6">Loading season...</p>
       )}
 
       <div className="grid grid-cols-4 gap-6">
@@ -241,7 +279,7 @@ export default function SeasonClient({
                 size="sm"
                 disabled={isInList(animeItem.anilistId)}
               >
-                {isInList(animeItem.anilistId) ? 'In list' : '+ Add'}
+                {isInList(animeItem.anilistId) ? "In list" : "+ Add"}
               </Button>
             }
           />
@@ -266,9 +304,13 @@ export default function SeasonClient({
   );
 }
 
-function buildAddCallbackUrl(pathname: string, searchParams: URLSearchParams, anilistId: number) {
+function buildAddCallbackUrl(
+  pathname: string,
+  searchParams: URLSearchParams,
+  anilistId: number,
+) {
   const params = new URLSearchParams(searchParams.toString());
-  params.set('add', String(anilistId));
+  params.set("add", String(anilistId));
   return `${pathname}?${params.toString()}`;
 }
 

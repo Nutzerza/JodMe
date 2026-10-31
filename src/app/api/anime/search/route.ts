@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
-import { hybridSearchAnime } from "@/lib/services/animeService";
+import { hybridSearchAnime } from "@/shared/services/animeService";
 
 export async function GET(req: Request) {
+  console.log("Search API called");
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q") || "";
+  console.log(searchParams);
+  // const { searchParams } = new URL(req.url);
+  // const q = searchParams.get("q") || "";
 
-  if (!q.trim()) {
-    return NextResponse.json([]);
-  }
+  // if (!q.trim()) {
+  //   return NextResponse.json([]);
+  // }
 
   try {
-    const result = await hybridSearchAnime(q);
-
+    const result = await hybridSearchAnime(searchParams);
     return NextResponse.json(result);
   } catch (err) {
-    return NextResponse.json(
-      { message: "Search failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Search failed" }, { status: 500 });
   }
 }

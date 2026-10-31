@@ -1,6 +1,11 @@
-export type AnimeStatus = 'all' | 'watching' | 'completed' | 'on_hold' | 'dropped' | 'plan_to_watch';
-export type Season = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
-
+export type AnimeStatus =
+  | "all"
+  | "watching"
+  | "completed"
+  | "on_hold"
+  | "dropped"
+  | "plan_to_watch";
+export type Season = "WINTER" | "SPRING" | "SUMMER" | "FALL";
 
 export const SEASON_ORDER = {
   WINTER: 1,
@@ -10,7 +15,7 @@ export const SEASON_ORDER = {
 };
 
 export interface Anime {
-  id: string;
+  id: number;
   anilistId: number;
 
   title: string;
@@ -31,19 +36,19 @@ export interface Anime {
 }
 
 export interface UserAnimeEntry {
-  id?: string;
+  id?: number;
   anime: Anime;
   status: AnimeStatus;
   progress: number; // episodes watched
   score: number | null; // 0-10
   dateAdded: string;
   updatedAt: string;
-  userId?: string; // for POST
-  animeId?: string; // for POST
+  userId?: number; // for POST
+  animeId?: number; // for POST
 }
 
 export interface SeasonAnime extends Anime {
-  airingStatus: 'airing' | 'upcoming' | 'finished';
+  airingStatus: "airing" | "upcoming" | "finished";
 }
 
 export interface Stats {
@@ -51,8 +56,8 @@ export interface Stats {
   episodesWatched: number;
   daysWatched: number;
   avgScore: number;
-  genreDistribution: { genre: string; count: number; }[];
-  scoreDistribution: { score: number; count: number; }[];
+  genreDistribution: { genre: string; count: number }[];
+  scoreDistribution: { score: number; count: number }[];
 }
 
 export interface MonthlyWatchStat {

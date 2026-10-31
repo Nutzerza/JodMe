@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { AnimeStatus, UserAnimeEntry } from "@/types/anime";
 import { StatusSidebar } from "@/components/StatusSidebar";
 import { AnimeListSkeleton } from "@/components/skeletons/AnimeListSkeleton";
-import { AnimeListItem } from "@/components/AnimeCard";
+import { AnimeListItem } from "@/shared/components/AnimeCard";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
 import { useDebounce } from "@/shared/hooks/useDebounce";

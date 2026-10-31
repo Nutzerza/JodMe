@@ -1,6 +1,6 @@
 // app/u/[username]/search/page.tsx
 
-import { getAllAnime } from '@/lib/services/animeService';
+import { getAllAnime } from '@/shared/services/animeService';
 import SearchClient from '@/components/searchPage/SearchClient';
 import { Anime } from '@/types/anime';
 import { fetchUserAnimeListByEmail } from '@/lib/services/userAnimeService';

@@ -2,7 +2,7 @@ import { AnimeStatus } from "@prisma/client";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
-import { ensureAnimeInDatabase } from "@/lib/services/animeService";
+import { ensureAnimeInDatabase } from "@/shared/services/animeService";
 import { fetchUserAnimeListByUserId } from "@/lib/services/userAnimeService";
 import { syncWatchHistory } from "@/lib/services/watchHistoryService";
 import { prisma } from "@/lib/prisma";

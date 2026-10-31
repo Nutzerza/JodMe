@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllAnime } from "@/lib/services/animeService";
+import { getAllAnime } from "@/shared/services/animeService";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -8,6 +8,7 @@ export async function GET(req: Request) {
   const limit = Number(searchParams.get("limit") || 20);
 
   const data = await getAllAnime(page, limit);
+  console.log(data);
 
   return NextResponse.json(data);
 }

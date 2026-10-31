@@ -21,6 +21,15 @@ enum AnimeStatus {
   ON_HOLD
 }
 
+model SeasonFetch {
+  id        Int      @id @default(autoincrement())
+  season    String
+  year      Int
+  fetchedAt DateTime @default(now())
+
+  @@unique([season, year])
+}
+
 model MapUserUid {
   id  Int    @unique
   uid String @unique
@@ -50,6 +59,8 @@ model User {
 
   createdAt    DateTime       @default(now())
   watchHistory WatchHistory[]
+
+  @@index([email])
 }
 
 model Anime {
