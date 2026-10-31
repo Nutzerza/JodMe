@@ -2,17 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import {
-  X,
-  BookmarkPlus,
-  Star,
-  Tv,
-  CheckCircle2,
-  Clock,
-  PauseCircle,
-  XCircle,
-  Loader2,
-} from "lucide-react";
+import { X, BookmarkPlus, Star, Loader2 } from "lucide-react";
 import { Anime, AnimeStatus } from "@/types/anime";
 
 interface AddAnimeDialogProps {
@@ -20,6 +10,7 @@ interface AddAnimeDialogProps {
   open: boolean;
   onClose: () => void;
   onAddNewAnime: (
+    anime: Anime,
     status: AnimeStatus,
     progress: number,
     score: number | null,
@@ -41,6 +32,7 @@ export function AddAnimeDialog({
   const [mounted, setMounted] = useState(false);
   const [adding, setAdding] = useState(false);
 
+  // Handle mounting animation
   useEffect(() => {
     function handleOpen() {
       if (open) {
@@ -52,6 +44,7 @@ export function AddAnimeDialog({
     handleOpen();
   }, [open]);
 
+  // Reset form when anime changes
   useEffect(() => {
     function handleAnimeChange() {
       if (anime) {
@@ -63,8 +56,19 @@ export function AddAnimeDialog({
     handleAnimeChange();
   }, [anime]);
 
+  function resetForm() {
+    setStatus("plan_to_watch");
+    setProgress(0);
+    setScore(null);
+  }
+
   // close on Escape
   useEffect(() => {
+    // Reset form when dialog opens
+    function handleDialogOpen() {
+      resetForm();
+    }
+    handleDialogOpen();
     if (!open) return;
     const handler = (e: KeyboardEvent) =>
       e.key === "Escape" && !adding && onClose();
@@ -72,17 +76,42 @@ export function AddAnimeDialog({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose, adding]);
 
+  // Handle change status and progress based on current status and episode count
+  useEffect(() => {
+    function handleStatusAndProgress() {
+      const totalEpisodes = anime?.episodes;
+
+      if (!totalEpisodes || totalEpisodes <= 0) return;
+
+      if (status === "completed") {
+        if (progress !== totalEpisodes) {
+          setProgress(totalEpisodes);
+        }
+      } else if (status === "plan_to_watch") {
+        if (progress !== 0) {
+          setProgress(0);
+        }
+      } else if (status === "watching") {
+        if (progress <= 0) {
+          setProgress(1);
+        } else if (progress >= totalEpisodes) {
+          setProgress(totalEpisodes - 1);
+        }
+      }
+    }
+    handleStatusAndProgress();
+  }, [status, progress, anime?.episodes]);
+
   if (!open || !anime) return null;
 
+  // Handle submit
   const handleSubmit = async () => {
     if (adding) return;
 
     setAdding(true);
     try {
-      await onAddNewAnime(status, progress, score);
-      setStatus("plan_to_watch");
-      setProgress(0);
-      setScore(null);
+      await onAddNewAnime(anime, status, progress, score);
+      resetForm();
       onClose();
     } catch {
       // Stay open; parent shows error toast
@@ -186,22 +215,7 @@ export function AddAnimeDialog({
                   key={opt.value}
                   type="button"
                   onClick={() => setStatus(opt.value)}
-                  className="flex flex-col items-center gap-1 py-2 rounded-xl transition-all duration-150 text-center"
-                  style={{
-                    background:
-                      status === opt.value
-                        ? opt.bg.replace("/10", "/15")
-                        : "rgba(15,23,42,0.5)",
-                    border: `1px solid ${status === opt.value ? opt.border.replace("/40", "") : "rgba(99,102,241,0.12)"}`,
-                    color:
-                      status === opt.value
-                        ? opt.color.replace("text-", "")
-                        : "#475569",
-                    boxShadow:
-                      status === opt.value
-                        ? `0 0 14px ${opt.color.replace("text-", "")}20`
-                        : "none",
-                  }}
+                  className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-all duration-150 text-center ${status === opt.value ? "scale-105 border border-[color:" + opt.border + "] bg-[color:" + opt.bg + "]" : "border border-gray-900"}`}
                 >
                   <span
                     className={

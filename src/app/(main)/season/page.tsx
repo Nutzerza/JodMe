@@ -1,7 +1,10 @@
 import { AnimeSeasonPage } from "@/features/anime/animeSeason/pages/AnimeSeasonPage";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/features/auth/lib/authOptions";
 
-export default function SeasonPage() {
-  return <AnimeSeasonPage />;
+export default async function SeasonPage() {
+  const session = await getServerSession(authOptions);
+  return <AnimeSeasonPage isAuthenticated={!!session?.user} />;
 }
 
 // import { getServerSession } from "next-auth";

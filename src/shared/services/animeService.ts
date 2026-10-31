@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Anime, Season, SEASON_ORDER } from "@/types/anime";
 import { getCurrentSeason } from "@/features/anime/animeSeason/utils/getCurrentSeason";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { getSeasonOrder } from "@/features/anime/animeSeason/utils/seasonUtils";
 
@@ -117,6 +117,77 @@ export async function fetchAnimeFromAniListById(anilistId: number) {
   return mapAniListMedia(media);
 }
 
+async function bulkUpdateAnime(
+  tx: Prisma.TransactionClient,
+  animeList: AniListMedia[],
+) {
+  if (animeList.length === 0) return;
+
+  const values = animeList.map((anime) => {
+    const averageScore =
+      anime.averageScore == null
+        ? null
+        : anime.averageScore > 10
+          ? anime.averageScore / 10
+          : anime.averageScore;
+
+    const trailer = anime.trailer
+      ? JSON.stringify({
+          id: anime.trailer.id,
+          site: anime.trailer.site,
+        })
+      : null;
+
+    return Prisma.sql`(
+      ${anime.id},
+      ${anime.title?.romaji ?? ""},
+      ${anime.description ?? null},
+      ${anime.coverImage?.large ?? ""},
+      ${trailer},
+      ${anime.episodes ?? null},
+      ${anime.season ?? null},
+      ${getSeasonOrder(anime.season ?? "")},
+      ${anime.seasonYear ?? null},
+      ${anime.genres ?? []}::text[],
+      ${averageScore},
+      ${anime.status ?? null}
+    )`;
+  });
+
+  await tx.$executeRaw`
+    UPDATE "Anime" AS a
+    SET
+      "title" = v."title",
+      "description" = v."description",
+      "coverImage" = v."coverImage",
+      "trailer" = v."trailer"::jsonb,
+      "episodes" = v."episodes",
+      "season" = v."season",
+      "seasonOrder" = v."seasonOrder",
+      "year" = v."year",
+      "genres" = v."genres",
+      "averageScore" = v."averageScore",
+      "status" = v."status"
+    FROM (
+      VALUES ${Prisma.join(values)}
+    ) AS v(
+      "anilistId",
+      "title",
+      "description",
+      "coverImage",
+      "trailer",
+      "episodes",
+      "season",
+      "seasonOrder",
+      "year",
+      "genres",
+      "averageScore",
+      "status"
+    )
+    WHERE a."anilistId" = v."anilistId"
+  `;
+}
+
 /** Fetch from AniList and persist when the user adds to their list. */
 export async function ensureAnimeInDatabase(
   animeList: AniListMedia[],
@@ -136,6 +207,19 @@ export async function ensureAnimeInDatabase(
     (anime) => !existingIds.has(anime.id),
   );
 
+  const animeToUpdate = uniqueAnime.filter((anime) =>
+    existingIds.has(anime.id),
+  );
+  await prisma.$transaction(
+    async (tx) => {
+      await bulkUpdateAnime(tx, animeToUpdate);
+    },
+    {
+      maxWait: 10000,
+      timeout: 60000,
+    },
+  );
+
   // 4. Bulk insert missing anime and their UID mappings.
   if (animeToCreate.length > 0) {
     await prisma.$transaction(async (tx) => {
@@ -145,6 +229,12 @@ export async function ensureAnimeInDatabase(
           title: anime.title?.romaji,
           description: anime.description ?? null,
           coverImage: anime.coverImage?.large ?? "",
+          trailer: anime.trailer
+            ? {
+                id: anime.trailer.id,
+                site: anime.trailer.site,
+              }
+            : Prisma.DbNull,
           episodes: anime.episodes ?? null,
           season: anime.season ?? null,
           seasonOrder: getSeasonOrder(anime.season ?? ""),
@@ -398,7 +488,7 @@ export async function getSeasonAnime(season?: Season, year?: number) {
 
   if (!seasonFetch) {
     const apiAnime = await fetchSeasonFromAniList(season, year);
-    console.log(apiAnime.length);
+    // console.log(apiAnime);
     await ensureAnimeInDatabase(apiAnime, dbAnime, season, year, current);
     const mappedApiAnime = apiAnime.map(mapAniListMedia);
     return mergeAnime(dbAnime, mappedApiAnime);

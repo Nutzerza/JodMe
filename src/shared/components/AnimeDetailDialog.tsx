@@ -49,14 +49,21 @@ export function AnimeDetailDialog({
   if (!open || !anime) return null;
 
   // Extract and format the trailer URL for embedding if it's a YouTube link
-  const trailerSrc = anime.trailer
-    ? anime.trailer.includes("youtube.com") ||
-      anime.trailer.includes("youtu.be")
-      ? anime.trailer
-          .replace("watch?v=", "embed/")
-          .replace("youtu.be/", "youtube.com/embed/")
-      : anime.trailer
-    : null;
+  const trailerSrc = (() => {
+    const trailer = anime.trailer;
+
+    if (!trailer?.id || !trailer?.site) return null;
+    switch (trailer.site.toLowerCase()) {
+      case "youtube":
+        return `https://www.youtube.com/embed/${trailer.id}`;
+
+      case "dailymotion":
+        return `https://www.dailymotion.com/embed/video/${trailer.id}`;
+
+      default:
+        return null;
+    }
+  })();
 
   return (
     <div
@@ -115,7 +122,7 @@ export function AnimeDetailDialog({
             {/* ── Title + badges + Add button ── */}
             <div className="flex flex-col justify-end pb-1 min-w-0 flex-1">
               <h2
-                className="text-white font-bold text-xl leading-tight truncate"
+                className="text-white font-bold text-lg leading-tight"
                 title={anime.title}
               >
                 {anime.title}

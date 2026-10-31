@@ -3,14 +3,13 @@ import type { Prisma } from "@prisma/client";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
-
 /** Sync episode watch logs when list progress changes. */
 export async function syncWatchHistory(
-  userId: string,
-  animeId: string,
+  userId: number,
+  animeId: number,
   oldProgress: number,
   newProgress: number,
-  db: Db = prisma
+  db: Db = prisma,
 ) {
   const oldP = Math.max(0, Math.floor(oldProgress));
   const newP = Math.max(0, Math.floor(newProgress));
@@ -26,7 +25,7 @@ export async function syncWatchHistory(
     });
 
     const logged = new Set(existing.map((e) => e.episode));
-    const toCreate: { userId: string; animeId: string; episode: number }[] = [];
+    const toCreate: { userId: number; animeId: number; episode: number }[] = [];
 
     for (let episode = oldP + 1; episode <= newP; episode++) {
       if (!logged.has(episode)) {
@@ -49,16 +48,19 @@ export async function syncWatchHistory(
 }
 
 export async function clearWatchHistoryForAnime(
-  userId: string,
-  animeId: string,
-  db: Db = prisma
+  userId: number,
+  animeId: number,
+  db: Db = prisma,
 ) {
   await db.watchHistory.deleteMany({
     where: { userId, animeId },
   });
 }
 
-export async function fetchMonthlyWatchStatsByEmail(email: string, months = 12) {
+export async function fetchMonthlyWatchStatsByEmail(
+  email: string,
+  months = 12,
+) {
   const user = await prisma.user.findUnique({
     where: { email },
     select: { id: true },
@@ -85,7 +87,10 @@ export async function fetchMonthlyWatchStatsByEmail(email: string, months = 12) 
     orderBy: { watchedAt: "asc" },
   });
 
-  const monthMap = new Map<string, { episodes: number; animeIds: Set<string> }>();
+  const monthMap = new Map<
+    string,
+    { episodes: number; animeIds: Set<string> }
+  >();
 
   for (let offset = months - 1; offset >= 0; offset--) {
     const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
@@ -123,7 +128,7 @@ export async function fetchWeeklyWatchStatsByEmail(email: string, weeks = 12) {
   const now = new Date();
   const currentWeekStart = getWeekStart(now);
   const start = new Date(currentWeekStart);
-  start.setDate(start.getDate() - ((weeks - 1) * 7));
+  start.setDate(start.getDate() - (weeks - 1) * 7);
 
   const history = await prisma.watchHistory.findMany({
     where: {
@@ -139,12 +144,18 @@ export async function fetchWeeklyWatchStatsByEmail(email: string, weeks = 12) {
     orderBy: { watchedAt: "asc" },
   });
 
-  const weekMap = new Map<string, { episodes: number; animeIds: Set<string> }>();
+  const weekMap = new Map<
+    string,
+    { episodes: number; animeIds: Set<string> }
+  >();
 
   for (let offset = weeks - 1; offset >= 0; offset--) {
     const date = new Date(currentWeekStart);
-    date.setDate(date.getDate() - (offset * 7));
-    weekMap.set(formatDateKey(date), { episodes: 0, animeIds: new Set<string>() });
+    date.setDate(date.getDate() - offset * 7);
+    weekMap.set(formatDateKey(date), {
+      episodes: 0,
+      animeIds: new Set<string>(),
+    });
   }
 
   history.forEach((entry) => {
@@ -215,7 +226,11 @@ export async function fetchRecentWatchStatsByEmail(email: string, limit = 5) {
 }
 
 function getWeekStart(date: Date) {
-  const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const weekStart = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  );
   const day = weekStart.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   weekStart.setDate(weekStart.getDate() + diff);

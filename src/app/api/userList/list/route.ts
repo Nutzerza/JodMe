@@ -1,4 +1,5 @@
 import { AnimeStatus } from "@prisma/client";
+import { toPrismaStatus } from "@/features/anime/animeSeason/utils/getCurrentSeason";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -6,20 +7,23 @@ import { ensureAnimeInDatabase } from "@/shared/services/animeService";
 import { fetchUserAnimeListByUserId } from "@/lib/services/userAnimeService";
 import { syncWatchHistory } from "@/lib/services/watchHistoryService";
 import { prisma } from "@/lib/prisma";
+import { getUserFromToken } from "@/shared/utils/getUserFromToken";
 
 export async function GET(req: NextRequest) {
-  const userId = await getUserFromToken(req);
+  const tokenUserId = await getUserFromToken(req);
 
-  if (!userId) {
+  if (!tokenUserId) {
     return NextResponse.json([], { status: 200 });
   }
+
+  const userId = Number(tokenUserId);
 
   const { searchParams } = new URL(req.url);
 
   const page = Number(searchParams.get("page") || 1);
   const limit = Number(searchParams.get("limit") || 20);
 
-  const list = await fetchUserAnimeListByUserId({userId, page, limit});
+  const list = await fetchUserAnimeListByUserId({ userId, page, limit });
   return NextResponse.json(list);
 }
 
@@ -27,36 +31,35 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const userId = await getUserFromToken(req);
+    const tokenUserId = await getUserFromToken(req);
 
-    const { animeListId, status, progress, score } = body;
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    const { id, status, progress, score } = body;
+    if (!tokenUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const anime = await ensureAnimeInDatabase(Number(animeListId));
+    const userId = Number(tokenUserId);
 
-    if (!anime) {
-      return NextResponse.json(
-        { error: "Anime not found on AniList" },
-        { status: 404 }
-      );
-    }
+    // const anime = await ensureAnimeInDatabase(Number(animeListId));
 
+    // if (!anime) {
+    //   return NextResponse.json(
+    //     { error: "Anime not found on AniList" },
+    //     { status: 404 },
+    //   );
+    // }
+
+    // Get existing user anime entry if it exists
     const existing = await prisma.userAnime.findUnique({
       where: {
         userId_animeId: {
           userId,
-          animeId: anime.id,
+          animeId: id,
         },
       },
     });
 
-    const newStatus = toPrismaStatus(status);
-
+    // Prepare data for upsert
     const data: {
       status: AnimeStatus;
       progress: number;
@@ -64,24 +67,24 @@ export async function POST(req: NextRequest) {
       startDate?: Date;
       finishDate?: Date | null;
     } = {
-      status: newStatus,
+      status: toPrismaStatus(status),
       progress,
       score,
     };
-
+    // Set start and finish dates based on progress and status
     if (!existing && progress > 0) {
       data.startDate = new Date();
-    }
-
-    if (existing && existing.progress === 0 && progress > 0) {
+    } else if (existing && existing.progress === 0 && progress > 0) {
       data.startDate = new Date();
     }
-
-    if (newStatus === "COMPLETED") {
+    if (toPrismaStatus(status) === AnimeStatus.COMPLETED) {
       data.finishDate = new Date();
     }
-
-    if (existing && existing.status === "COMPLETED" && newStatus !== "COMPLETED") {
+    if (
+      existing &&
+      existing.status === AnimeStatus.COMPLETED &&
+      toPrismaStatus(status) !== AnimeStatus.COMPLETED
+    ) {
       data.finishDate = null;
     }
 
@@ -93,19 +96,19 @@ export async function POST(req: NextRequest) {
         where: {
           userId_animeId: {
             userId,
-            animeId: anime.id,
+            animeId: id,
           },
         },
         update: { ...data, progress: newProgress },
         create: {
           userId,
-          animeId: anime.id,
+          animeId: id,
           ...data,
           progress: newProgress,
         },
       });
 
-      await syncWatchHistory(userId, anime.id, oldProgress, newProgress, tx);
+      await syncWatchHistory(userId, id, oldProgress, newProgress, tx);
 
       return entry;
     });
@@ -115,18 +118,20 @@ export async function POST(req: NextRequest) {
     console.error(err);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = await getUserFromToken(req);
+    const tokenUserId = await getUserFromToken(req);
 
-    if (!userId) {
+    if (!tokenUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const userId = Number(tokenUserId);
 
     const { searchParams } = new URL(req.url);
     const animeListId = Number(searchParams.get("animeListId"));
@@ -134,7 +139,7 @@ export async function DELETE(req: NextRequest) {
     if (!animeListId) {
       return NextResponse.json(
         { error: "Missing animeListId" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -170,35 +175,35 @@ export async function DELETE(req: NextRequest) {
     console.error(err);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-function toPrismaStatus(status: string): AnimeStatus {
-  switch (status) {
-    case "plan_to_watch":
-      return AnimeStatus.PLANNING;
-    case "watching":
-      return AnimeStatus.WATCHING;
-    case "completed":
-      return AnimeStatus.COMPLETED;
-    case "on_hold":
-      return AnimeStatus.ON_HOLD;
-    case "dropped":
-      return AnimeStatus.DROPPED;
-    default:
-      return AnimeStatus.PLANNING;
-  }
-}
+// function toPrismaStatus(status: string): AnimeStatus {
+//   switch (status) {
+//     case "plan_to_watch":
+//       return AnimeStatus.PLANNING;
+//     case "watching":
+//       return AnimeStatus.WATCHING;
+//     case "completed":
+//       return AnimeStatus.COMPLETED;
+//     case "on_hold":
+//       return AnimeStatus.ON_HOLD;
+//     case "dropped":
+//       return AnimeStatus.DROPPED;
+//     default:
+//       return AnimeStatus.PLANNING;
+//   }
+// }
 
-export async function getUserFromToken(req: NextRequest) {
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+// export async function getUserFromToken(req: NextRequest) {
+//   const token = await getToken({
+//     req,
+//     secret: process.env.NEXTAUTH_SECRET,
+//   });
 
-  if (!token) return null;
+//   if (!token) return null;
 
-  return token.id as string;
-}
+//   return token.id;
+// }

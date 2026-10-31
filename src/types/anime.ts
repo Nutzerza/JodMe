@@ -32,7 +32,11 @@ export interface Anime {
   synopsis?: string;
 
   description?: string | null;
-  trailer?: string | null;
+  trailer?: { id: string; site: string } | null;
+}
+
+export interface UserAnimeID {
+  id: number;
 }
 
 export interface UserAnimeEntry {

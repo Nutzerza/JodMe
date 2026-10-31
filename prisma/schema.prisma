@@ -70,7 +70,7 @@ model Anime {
   title        String
   description  String? @db.Text
   coverImage   String
-  trailer      String? // URL ของ trailer (ถ้ามี)
+  trailer      Json? // URL ของ trailer (ถ้ามี)
   episodes     Int?
   season       String?
   seasonOrder  Int? // 1-4 สำหรับ WINTER-SPRING-SUMMER-FALL
