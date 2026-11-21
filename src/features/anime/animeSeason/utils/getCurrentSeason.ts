@@ -13,8 +13,6 @@ export function getCurrentSeason() {
   else if (month <= 9) season = "SUMMER";
   else season = "FALL";
 
-  console.log(`Current season: ${season}, Year: ${year}`);
-
   return { season, year };
 }
 

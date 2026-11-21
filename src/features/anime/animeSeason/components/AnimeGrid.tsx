@@ -19,7 +19,12 @@ export function AnimeGrid({
   onAddClick,
 }: AnimeGridProps) {
   return (
-    <>
+    <div
+      className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6"
+      aria-label="Loading anime"
+      aria-busy="true"
+      role="status"
+    >
       {anime.map((animeItem, index) => {
         const isInList = userAnimeIds.includes(animeItem.id);
         return (
@@ -52,6 +57,6 @@ export function AnimeGrid({
           />
         );
       })}
-    </>
+    </div>
   );
 }

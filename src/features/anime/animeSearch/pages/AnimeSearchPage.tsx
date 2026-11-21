@@ -1,17 +1,33 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { AnimeCard } from "@/shared/components/AnimeCard";
-// import AnimeDetailDialog from "@/shared/components/AnimeDetailDialog";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { AnimeGrid } from "@/features/anime/animeSeason/components/AnimeGrid";
+import { AnimeGridSkeleton } from "@/features/anime/animeSeason/components/skeleton/AnimeGridSkeleton";
+import { AnimeDetailDialog } from "@/shared/components/AnimeDetailDialog";
 import { AddAnimeDialog } from "@/shared/components/AddAnimeDialog";
 import { Button } from "@/shared/components/ui/button";
-import type { Anime } from "@/types/anime";
+import type { Anime, AnimeStatus } from "@/types/anime";
 import { Input } from "@/shared/components/ui/input";
-import { getAnimeIcon } from "../../animeSeason/utils/getAnimeIcon";
+import {
+  buildAddCallbackUrl,
+  getPendingAnime,
+  clearPendingAnime,
+  savePendingAnime,
+} from "@/features/anime/animeSeason/utils/callbackAddAnime";
 
 const PAGE_SIZE = 20;
 const DEBOUNCE_DELAY = 400;
 
-export function AnimeSearchPage() {
+export function AnimeSearchPage({
+  isAuthenticated,
+}: {
+  isAuthenticated: boolean;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -20,15 +36,33 @@ export function AnimeSearchPage() {
   const tickingRef = useRef(false);
 
   const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [loading, setLoading] = useState(false);
   const [detailAnime, setDetailAnime] = useState<Anime | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
 
   const [animes, setAnimes] = useState<Anime[]>([]);
 
-  // 1. Debounce query
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  const [userAnimeIds, setUserAnimeIds] = useState<number[]>([]);
+
+  // Get my anime list for the user
+  useEffect(() => {
+    async function fetchUserAnimeList() {
+      try {
+        const response = await fetch(`/api/userList/list/getMy`);
+        const data = await response.json();
+        setUserAnimeIds(data);
+      } catch (err) {
+        console.error("Fetch User Anime List Error:", err);
+      }
+    }
+    fetchUserAnimeList();
+  }, []);
+
+  // Debounce query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query.trim());
@@ -36,7 +70,7 @@ export function AnimeSearchPage() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // 2. Reset page when query changes
+  // Reset page when query changes
   useEffect(() => {
     function resetSearch() {
       setPage(1);
@@ -45,10 +79,9 @@ export function AnimeSearchPage() {
     resetSearch();
   }, [debouncedQuery]);
 
-  // 3. Fetch anime data when page or debounced query changes
+  // Fetch anime data when page or debounced query changes
   useEffect(() => {
     const controller = new AbortController();
-
     async function fetchAnime() {
       try {
         setLoading(true);
@@ -105,7 +138,7 @@ export function AnimeSearchPage() {
     return () => controller.abort();
   }, [page, debouncedQuery]);
 
-  // 4. Infinite scroll (does not fetch directly)
+  // Infinite scroll (does not fetch directly)
   useEffect(() => {
     const element = loadMoreRef.current;
 
@@ -132,8 +165,120 @@ export function AnimeSearchPage() {
     return () => observer.disconnect();
   }, [hasMore, debouncedQuery, loading]);
 
+  // Handle adding an anime to the user's list by opening the add dialog
+  function handleAddAnime(animeItem: Anime) {
+    setDetailDialogOpen(false);
+    setAddDialogOpen(true);
+    setDetailAnime(animeItem);
+  }
+
+  // Update the user's anime list by sending a request to the server
+  async function updateUserAnimeList(
+    animeItem: Anime,
+    status: AnimeStatus,
+    progress: number,
+    score: number | null,
+  ) {
+    const res = await fetch("/api/userList/list", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: animeItem.id,
+        status,
+        progress,
+        score,
+        from: "animeSeasonPage",
+      }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? "Failed to add anime");
+    }
+
+    setUserAnimeIds((prev) => [...prev, animeItem.id]);
+  }
+
+  // Handle the process of adding a new anime to the user's list, including authentication and pending anime management
+  async function handleAddNewAnime(
+    animeItem: Anime,
+    status: AnimeStatus,
+    progress: number,
+    score: number | null,
+  ): Promise<void> {
+    if (!isAuthenticated) {
+      savePendingAnime(animeItem, {
+        status: status,
+        progress: progress,
+        score: score,
+      });
+      router.push(
+        `/auth?callbackUrl=${encodeURIComponent(buildAddCallbackUrl(pathname, searchParams, animeItem.id))}`,
+      );
+      return;
+    }
+
+    // Adding anime to the user's list
+    const title = animeItem.title;
+    const toastId = toast.loading(`Adding "${title}"...`);
+
+    try {
+      await updateUserAnimeList(animeItem, status, progress, score);
+      toast.success(`Added "${title}"`, { id: toastId });
+      setAddDialogOpen(false);
+    } catch (err) {
+      console.error(err);
+      const message =
+        err instanceof Error ? err.message : "Failed to add anime";
+      toast.error(message, { id: toastId });
+      throw err;
+    }
+  }
+
+  // Handle any pending anime that needs to be added after authentication
+  useEffect(() => {
+    async function handlePendingAnime() {
+      if (!isAuthenticated) return;
+
+      const addAnimeId = Number(searchParams.get("add"));
+
+      if (!addAnimeId) return;
+
+      const pendingAnime = getPendingAnime(addAnimeId);
+      const animeItem = pendingAnime?.anime;
+      const addForm = pendingAnime?.addForm;
+
+      if (!animeItem) return;
+
+      // Adding anime to the user's list
+      const title = animeItem.title;
+      const toastId = toast.loading(`Adding "${title}"...`);
+      try {
+        await updateUserAnimeList(
+          animeItem,
+          addForm?.status ?? "plan_to_watch",
+          addForm?.progress ?? 0,
+          addForm?.score ?? null,
+        );
+        toast.success(`Added "${title}"`, { id: toastId });
+        setAddDialogOpen(false);
+      } catch (err) {
+        console.error(err);
+        const message =
+          err instanceof Error ? err.message : "Failed to add anime";
+        toast.error(message, { id: toastId });
+        throw err;
+      }
+
+      clearPendingAnime();
+
+      router.replace(pathname, { scroll: false });
+    }
+    handlePendingAnime();
+  }, [isAuthenticated, searchParams, pathname, router]);
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="container max-w-6xl mx-auto p-6">
       <div className="flex gap-3 mb-8">
         <Input
           placeholder="Search anime title..."
@@ -144,7 +289,7 @@ export function AnimeSearchPage() {
         <Button className="bg-purple-600 px-8 h-12">Search</Button>
       </div>
 
-      {query && (
+      {/* {query && (
         <p className="text-sm text-slate-400 mb-6">
           Results for &quot;{query}&quot;
         </p>
@@ -156,50 +301,43 @@ export function AnimeSearchPage() {
         </p>
       )}
 
-      {error && <p className="text-center text-red-400 mb-6">{error}</p>}
+      {error && <p className="text-center text-red-400 mb-6">{error}</p>} */}
 
-      <div className="grid grid-cols-4 gap-6">
-        {animes.map((anime, index) => (
-          <AnimeCard
-            key={`${anime.id}-${anime.anilistId}`}
-            anime={anime}
-            icon={getAnimeIcon(index)}
-            onClick={() => {
-              setDetailAnime(anime);
-              setDetailOpen(true);
+      <div>
+        {/* Initial Loading */}
+        {loading && page === 1 ? (
+          <AnimeGridSkeleton />
+        ) : (
+          <AnimeGrid
+            anime={animes}
+            userAnimeIds={userAnimeIds}
+            onDetailOpen={(animeItem) => {
+              setDetailAnime(animeItem);
+              setDetailDialogOpen(true);
             }}
-            // statusBadge={
-            //   isInList(anime.anilistId) && (
-            //     <span className="px-2 py-1 bg-emerald-600 text-xs rounded">
-            //       In list
-            //     </span>
-            //   )
-            // }
-            actionButton={
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // handleAddClick(anime);
-                }}
-                // disabled={isInList(anime.anilistId)}
-                size="sm"
-              >
-                {/* {isInList(anime.anilistId) ? "In list" : "+ Add"} */}
-              </Button>
-            }
+            onAddClick={(animeItem) => {
+              handleAddAnime(animeItem);
+            }}
           />
-        ))}
+        )}
+
+        {/* Infinite Scroll Trigger */}
+        {!debouncedQuery && hasMore && (
+          <div className="mt-4" ref={loadMoreRef}>
+            {loading && page > 1 && <AnimeGridSkeleton count={6} />}
+          </div>
+        )}
       </div>
 
       {/* Infinite Scroll Trigger */}
-      {!debouncedQuery && hasMore && (
+      {/* {!debouncedQuery && hasMore && (
         <div
           ref={loadMoreRef}
           className="h-20 flex items-center justify-center"
         >
           {loading && <span className="text-slate-400">Loading...</span>}
         </div>
-      )}
+      )} */}
 
       {animes.length === 0 && !loading && !error && (
         <div className="text-center py-12 text-slate-400">
@@ -213,20 +351,26 @@ export function AnimeSearchPage() {
         </div>
       )}
 
-      {/* <AddAnimeDialog
-        anime={selectedAnime}
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onAdd={handleAdd}
-      />
-
+      {/* Anime detail dialogs */}
       <AnimeDetailDialog
         anime={detailAnime}
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        isInList={detailAnime ? isInList(detailAnime.anilistId) : false}
-        onAdd={handleAddClick}
-      /> */}
+        open={detailDialogOpen}
+        isInList={detailAnime ? userAnimeIds.includes(detailAnime.id) : false}
+        onClose={() => setDetailDialogOpen(false)}
+        onOpenAddDialog={(animeItem) => {
+          if (animeItem) {
+            handleAddAnime(animeItem);
+          }
+        }}
+      />
+
+      {/* Add anime dialog */}
+      <AddAnimeDialog
+        anime={detailAnime}
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+        onAddNewAnime={handleAddNewAnime}
+      />
     </div>
   );
 }

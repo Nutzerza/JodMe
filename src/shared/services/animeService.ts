@@ -96,7 +96,8 @@ async function fetchAniListSearch(query: string) {
     { search: query },
   );
 
-  return (data?.Page.media ?? []).map(mapAniListMedia);
+  return data?.Page.media ?? [];
+  // return (data?.Page.media ?? []).map(mapAniListMedia);
 }
 
 export async function fetchAnimeFromAniListById(anilistId: number) {
@@ -149,7 +150,7 @@ async function bulkUpdateAnime(
       ${getSeasonOrder(anime.season ?? "")},
       ${anime.seasonYear ?? null},
       ${anime.genres ?? []}::text[],
-      ${averageScore},
+      ${averageScore}::double precision,
       ${anime.status ?? null}
     )`;
   });
@@ -192,9 +193,9 @@ async function bulkUpdateAnime(
 export async function ensureAnimeInDatabase(
   animeList: AniListMedia[],
   dbAnime: Anime[],
-  season: string,
-  year: number,
-  current: { season: string; year: number },
+  season?: string,
+  year?: number,
+  current?: { season: string; year: number },
 ) {
   // 1. Collect existing AniList IDs from database results.
   const existingIds = new Set(dbAnime.map((anime) => anime.anilistId));
@@ -270,14 +271,16 @@ export async function ensureAnimeInDatabase(
 
   // if season and year are below current season save the fetch
   // if the season and year are equal or in the future, do not save the fetch
-  if (
-    year < current.year ||
-    (year === current.year &&
-      getSeasonOrder(season) < getSeasonOrder(current.season))
-  ) {
-    await prisma.seasonFetch.create({
-      data: { season, year },
-    });
+  if (current && season && year) {
+    if (
+      year < current.year ||
+      (year === current.year &&
+        getSeasonOrder(season) < getSeasonOrder(current.season))
+    ) {
+      await prisma.seasonFetch.create({
+        data: { season, year },
+      });
+    }
   }
 
   // 6. Return persisted anime with their UID mappings.
@@ -309,16 +312,16 @@ export async function hybridSearchAnime(searchParams: URLSearchParams) {
   const query = searchParams.get("query") || "";
   // if (!query.trim()) return [];
 
-  const dbResults = await prisma.anime.findMany({
-    // where: {
-    //   title: {
-    //     contains: query,
-    //     mode: "insensitive",
-    //   },
-    // status: {
-    //   in: ["RELEASING", "FINISHED"],
-    // },
-    // },
+  const dbResults = (await prisma.anime.findMany({
+    where: {
+      title: {
+        contains: query,
+        mode: "insensitive",
+      },
+      status: {
+        in: ["RELEASING", "FINISHED"],
+      },
+    },
     // orderBy: { year: "desc" },
     orderBy: [
       { year: { sort: "desc", nulls: "last" } },
@@ -327,31 +330,13 @@ export async function hybridSearchAnime(searchParams: URLSearchParams) {
     ],
     take: limit,
     skip: (page - 1) * limit,
-  });
+  })) as Anime[];
 
-  // const apiResults = await fetchAniListSearch(query);
+  const apiResults = await fetchAniListSearch(query);
+  await ensureAnimeInDatabase(apiResults, dbResults);
 
-  const map = new Map<
-    number,
-    (typeof dbResults)[number]
-    // | (typeof apiResults)[number]
-  >();
-
-  // , ...apiResults
-  [...dbResults].forEach((anime) => {
-    map.set(anime.anilistId, anime);
-  });
-
-  const merged = Array.from(map.values());
-
-  merged.sort((a, b) => {
-    if (!a.year) return 1;
-    if (!b.year) return -1;
-    return b.year - a.year;
-  });
-  console.log("DB Results:", merged);
-
-  return merged;
+  const mappedApiAnime = apiResults.map(mapAniListMedia);
+  return mergeAnime(dbResults, mappedApiAnime);
 }
 
 // Fetch all anime from the database with pagination, ordered by year and season.
@@ -443,30 +428,65 @@ async function fetchSeasonFromAniList(season: Season, year: number) {
   return allMedia;
 }
 
+function fetchAnimeByAnilistIds(anilistIds: number[]) {
+  return prisma.anime.findMany({
+    where: {
+      anilistId: {
+        in: anilistIds,
+      },
+    },
+  });
+}
+
 // Merge anime from the database and API, prioritizing database entries and limiting the result set.
-function mergeAnime(
+async function mergeAnime(
   db: Anime[],
   api: ReturnType<typeof mapAniListMedia>[],
   // limit = 40,
 ) {
-  const map = new Map<number, (typeof db)[number] | (typeof api)[number]>();
+  // 1. Collect existing IDs from DB
+  const dbIds = new Set(
+    db.map((anime) => anime.anilistId).filter((id): id is number => id != null),
+  );
 
-  for (const a of db) {
-    if (a.anilistId) map.set(a.anilistId, a);
+  // 2. Find missing IDs from API
+  const missingIds = [
+    ...new Set(
+      api
+        .map((anime) => anime.anilistId)
+        .filter((id): id is number => id != null && !dbIds.has(id)),
+    ),
+  ];
+
+  // 3. Fetch missing anime in one query
+  const fetchedAnime =
+    missingIds.length > 0 ? await fetchAnimeByAnilistIds(missingIds) : [];
+
+  // 4. Merge DB data (including fetched data)
+  const map = new Map<
+    number,
+    | Anime
+    | Awaited<ReturnType<typeof fetchAnimeByAnilistIds>>[number]
+    | ReturnType<typeof mapAniListMedia>
+  >();
+
+  for (const anime of [...db, ...fetchedAnime]) {
+    if (anime.anilistId != null) {
+      map.set(anime.anilistId, anime);
+    }
   }
 
-  for (const a of api) {
-    if (!map.has(a.anilistId)) map.set(a.anilistId, a);
+  // 5. Add API data only if DB doesn't have it
+  for (const anime of api) {
+    if (anime.anilistId != null && !map.has(anime.anilistId)) {
+      map.set(anime.anilistId, anime);
+    }
   }
 
-  const merged = Array.from(map.values());
-
-  merged.sort((a, b) => {
-    return (b.averageScore ?? 0) - (a.averageScore ?? 0);
-  });
-
-  // return merged.slice(0, limit);
-  return merged;
+  // 6. Sort by averageScore
+  return Array.from(map.values()).sort(
+    (a, b) => (b.averageScore ?? 0) - (a.averageScore ?? 0),
+  );
 }
 
 // Fetch anime for a specific season and year, merging database and API results.
@@ -488,7 +508,6 @@ export async function getSeasonAnime(season?: Season, year?: number) {
 
   if (!seasonFetch) {
     const apiAnime = await fetchSeasonFromAniList(season, year);
-    // console.log(apiAnime);
     await ensureAnimeInDatabase(apiAnime, dbAnime, season, year, current);
     const mappedApiAnime = apiAnime.map(mapAniListMedia);
     return mergeAnime(dbAnime, mappedApiAnime);

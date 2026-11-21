@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { hybridSearchAnime } from "@/shared/services/animeService";
 
 export async function GET(req: Request) {
-  console.log("Search API called");
   const { searchParams } = new URL(req.url);
-  console.log(searchParams);
   // const { searchParams } = new URL(req.url);
   // const q = searchParams.get("q") || "";
 

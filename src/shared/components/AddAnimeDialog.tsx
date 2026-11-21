@@ -1,9 +1,12 @@
+// Component for adding an anime to the user's list with status, progress, and score options.
 "use client";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { X, BookmarkPlus, Star, Loader2 } from "lucide-react";
 import { Anime, AnimeStatus } from "@/types/anime";
+import { STATUS_OPTIONS, SCORE_OPTIONS } from "@/shared/constants/constants";
+import { ScoreButton } from "@/shared/components/ScoreButton";
 
 interface AddAnimeDialogProps {
   anime: Anime | null;
@@ -16,9 +19,6 @@ interface AddAnimeDialogProps {
     score: number | null,
   ) => Promise<void>;
 }
-
-import { STATUS_OPTIONS, SCORE_OPTIONS } from "@/shared/constants/constants";
-import { ScoreButton } from "@/shared/components/ScoreButton";
 
 export function AddAnimeDialog({
   anime,
@@ -44,34 +44,28 @@ export function AddAnimeDialog({
     handleOpen();
   }, [open]);
 
-  // Reset form when anime changes
-  useEffect(() => {
-    function handleAnimeChange() {
-      if (anime) {
-        setStatus("plan_to_watch");
-        setProgress(0);
-        setScore(null);
-      }
-    }
-    handleAnimeChange();
-  }, [anime]);
-
   function resetForm() {
     setStatus("plan_to_watch");
     setProgress(0);
     setScore(null);
   }
 
+  // Reset form when anime changes
+  useEffect(() => {
+    function handleAnimeChange() {
+      if (anime) {
+        resetForm();
+      }
+    }
+    handleAnimeChange();
+  }, [anime]);
+
   // close on Escape
   useEffect(() => {
-    // Reset form when dialog opens
-    function handleDialogOpen() {
-      resetForm();
-    }
-    handleDialogOpen();
     if (!open) return;
-    const handler = (e: KeyboardEvent) =>
-      e.key === "Escape" && !adding && onClose();
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !adding) onClose();
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose, adding]);

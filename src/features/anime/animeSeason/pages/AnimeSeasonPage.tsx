@@ -1,25 +1,21 @@
+// Page component for displaying the anime for the current season and managing user interactions with the anime list.
 "use client";
 import { useState, useEffect } from "react";
-import { AnimeGridSkeleton } from "@/features/anime/animeSeason/components/skeleton/AnimeGridSkeleton";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { SeasonBar } from "@/features/anime/animeSeason/components/SeasonBar";
 import { AnimeGrid } from "@/features/anime/animeSeason/components/AnimeGrid";
-import { getCurrentSeason } from "@/features/anime/animeSeason/utils/getCurrentSeason";
+import { AnimeGridSkeleton } from "@/features/anime/animeSeason/components/skeleton/AnimeGridSkeleton";
 import { AnimeDetailDialog } from "@/shared/components/AnimeDetailDialog";
 import { AddAnimeDialog } from "@/shared/components/AddAnimeDialog";
-import type {
-  Anime,
-  UserAnimeID,
-  UserAnimeEntry,
-  AnimeStatus,
-} from "@/types/anime";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import type { Anime, AnimeStatus } from "@/types/anime";
+import { getCurrentSeason } from "@/features/anime/animeSeason/utils/getCurrentSeason";
 import {
   savePendingAnime,
   getPendingAnime,
   clearPendingAnime,
   buildAddCallbackUrl,
 } from "@/features/anime/animeSeason/utils/callbackAddAnime";
-import { toast } from "sonner";
 
 export function AnimeSeasonPage({
   isAuthenticated,
@@ -58,7 +54,6 @@ export function AnimeSeasonPage({
       // Fetch the user's anime list for the current season and year
       const responseUserAnimeList = await fetch(`/api/userList/list/getMy`);
       const userAnimeIDData = await responseUserAnimeList.json();
-      console.log(userAnimeIDData);
       setUserAnimeIds(userAnimeIDData);
 
       setLoading(false);
@@ -80,7 +75,6 @@ export function AnimeSeasonPage({
     progress: number,
     score: number | null,
   ) {
-    // console.log(animeItem);
     const res = await fetch("/api/userList/list", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,9 +92,7 @@ export function AnimeSeasonPage({
       throw new Error(data.error ?? "Failed to add anime");
     }
 
-    // const updatedListRes = await fetch("/api/userList/list");
-    // const updatedList = await updatedListRes.json();
-    // setUserList(updatedList.data ?? []);
+    setUserAnimeIds((prev) => [...prev, animeItem.id]);
   }
 
   // Handle the process of adding a new anime to the user's list, including authentication and pending anime management
@@ -186,16 +178,10 @@ export function AnimeSeasonPage({
       <SeasonBar
         currentSeason={{ season: season.season, year: season.year }}
         onSeasonChange={(newSeason, newYear) => {
-          console.log("Season changed to:", newSeason, newYear);
           setSeason({ season: newSeason, year: newYear });
         }}
       />
-      <div
-        className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6"
-        aria-label="Loading anime"
-        aria-busy="true"
-        role="status"
-      >
+      <div>
         {loading ? (
           <AnimeGridSkeleton />
         ) : (
@@ -203,12 +189,10 @@ export function AnimeSeasonPage({
             anime={animes}
             userAnimeIds={userAnimeIds}
             onDetailOpen={(animeItem) => {
-              console.log("Detail opened for:", animeItem);
               setDetailAnime(animeItem);
               setDetailDialogOpen(true);
             }}
             onAddClick={(animeItem) => {
-              console.log("Add clicked for:", animeItem);
               handleAddAnime(animeItem);
             }}
           />

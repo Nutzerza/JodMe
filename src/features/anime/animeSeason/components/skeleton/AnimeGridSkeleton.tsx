@@ -6,13 +6,12 @@ type AnimeGridSkeletonProps = {
 
 export function AnimeGridSkeleton({ count = 12 }: AnimeGridSkeletonProps) {
   return (
-    // <div
-    //   className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6"
-    //   aria-label="Loading anime"
-    //   aria-busy="true"
-    //   role="status"
-    // >
-    <>
+    <div
+      className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6"
+      aria-label="Loading anime"
+      aria-busy="true"
+      role="status"
+    >
       {Array.from({ length: count }, (_, index) => (
         <div key={index} className="animate-pulse">
           {/* Anime cover */}
@@ -27,7 +26,6 @@ export function AnimeGridSkeleton({ count = 12 }: AnimeGridSkeletonProps) {
       ))}
 
       <span className="sr-only">Loading Anime...</span>
-    </>
-    // </div>
+    </div>
   );
 }
