@@ -28,24 +28,24 @@ export const addAnimeToList = (entry: UserAnimeEntry) => {
     return true;
 };
 
-export const updateAnimeEntry = (animeId: string, updates: Partial<UserAnimeEntry>) => {
-    const list = getAnimeList();
-    const index = list.findIndex(item => item.anime.id === animeId);
+// export const updateAnimeEntry = (animeId: string, updates: Partial<UserAnimeEntry>) => {
+//     const list = getAnimeList();
+//     const index = list.findIndex(item => item.anime.id === animeId);
 
-    if (index !== -1) {
-        list[index] = { ...list[index], ...updates };
-        saveAnimeList(list);
-        return true;
-    }
+//     if (index !== -1) {
+//         list[index] = { ...list[index], ...updates };
+//         saveAnimeList(list);
+//         return true;
+//     }
 
-    return false;
-};
+//     return false;
+// };
 
-export const removeAnimeFromList = (animeId: string) => {
-    const list = getAnimeList();
-    const filtered = list.filter(item => item.anime.id !== animeId);
-    saveAnimeList(filtered);
-};
+// export const removeAnimeFromList = (animeId: string) => {
+//     const list = getAnimeList();
+//     const filtered = list.filter(item => item.anime.id !== animeId);
+//     saveAnimeList(filtered);
+// };
 
 export const calculateStats = (animeList: UserAnimeEntry[]): Stats => {
     const list = getAnimeList();
