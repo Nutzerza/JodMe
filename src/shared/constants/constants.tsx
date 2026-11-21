@@ -14,7 +14,7 @@ export const navItems = [
   { name: "My List", path: "/me" },
   { name: "Search", path: "/search" },
   { name: "Season", path: "/season" },
-  { name: "Stats", path: "/stats" },
+  // { name: "Stats", path: "/stats" },
 ];
 
 export const STATUS_CONFIG: Record<

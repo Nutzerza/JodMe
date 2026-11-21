@@ -1,6 +1,6 @@
 // import StatsClient from "@/components/statPage/StatsClient";
 // import { authOptions } from "@/features/auth/lib/authOptions";
-// import { fetchUserAnimeListByEmail } from "@/lib/services/userAnimeService";
+// // import { fetchUserAnimeListByEmail } from "@/lib/services/userAnimeService";
 // import {
 //   fetchMonthlyWatchStatsByEmail,
 //   fetchRecentWatchStatsByEmail,
@@ -12,7 +12,7 @@
 //   const session = await getServerSession(authOptions);
 //   const email = session?.user?.email || null;
 
-//   const animeList = email ? await fetchUserAnimeListByEmail(email) : [];
+//   // const animeList = email ? await fetchUserAnimeListByEmail(email) : [];
 
 //   const monthlyWatchStats = email
 //     ? await fetchMonthlyWatchStatsByEmail(email)
@@ -28,7 +28,7 @@
 
 //   return (
 //     <StatsClient
-//       initialList={animeList}
+//       initialList={[]}
 //       monthlyWatchStats={monthlyWatchStats}
 //       weeklyWatchStats={weeklyWatchStats}
 //       recentWatchStats={recentWatchStats}

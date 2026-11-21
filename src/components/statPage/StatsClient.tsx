@@ -1,16 +1,21 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import Image from 'next/image';
-import { Clock, Star } from 'lucide-react';
-import { MonthlyWatchStat, RecentWatchStat, UserAnimeEntry, WeeklyWatchStat } from '@/types/anime';
+import { useMemo, useState } from "react";
+import Image from "next/image";
+import { Clock, Star } from "lucide-react";
+import {
+  MonthlyWatchStat,
+  RecentWatchStat,
+  UserAnimeEntry,
+  WeeklyWatchStat,
+} from "@/types/anime";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/shared/components/ui/select';
+} from "@/shared/components/ui/select";
 import {
   BarChart,
   Bar,
@@ -22,7 +27,7 @@ import {
   LineChart,
   Line,
   CartesianGrid,
-} from 'recharts';
+} from "recharts";
 
 interface Props {
   initialList: UserAnimeEntry[];
@@ -31,28 +36,32 @@ interface Props {
   recentWatchStats: RecentWatchStat[];
 }
 
+type WatchRange = "monthly" | "weekly";
 
-type WatchRange = 'monthly' | 'weekly';
-
-export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatchStats, recentWatchStats }: Props) {
-  const [watchRange, setWatchRange] = useState<WatchRange>('monthly');
+export default function StatsClient({
+  initialList,
+  monthlyWatchStats,
+  weeklyWatchStats,
+  recentWatchStats,
+}: Props) {
+  const [watchRange, setWatchRange] = useState<WatchRange>("monthly");
 
   const animeList = useMemo(
-    () => Array.isArray(initialList) ? initialList : [],
-    [initialList]
+    () => (Array.isArray(initialList) ? initialList : []),
+    [initialList],
   );
 
   const stats = useMemo(() => calculateStats(animeList), [animeList]);
 
   const topRated = useMemo(() => {
     return animeList
-      .filter(entry => entry.score !== null)
+      .filter((entry) => entry.score !== null)
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 5);
   }, [animeList]);
 
   const monthlyData = useMemo(() => {
-    return monthlyWatchStats.map(item => ({
+    return monthlyWatchStats.map((item) => ({
       label: formatMonth(item.month),
       episodes: item.episodes,
       anime: item.anime,
@@ -60,22 +69,22 @@ export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatc
   }, [monthlyWatchStats]);
 
   const weeklyData = useMemo(() => {
-    return weeklyWatchStats.map(item => ({
+    return weeklyWatchStats.map((item) => ({
       label: formatWeek(item.week),
       episodes: item.episodes,
       anime: item.anime,
     }));
   }, [weeklyWatchStats]);
 
-  const watchChartData = watchRange === 'monthly' ? monthlyData : weeklyData;
+  const watchChartData = watchRange === "monthly" ? monthlyData : weeklyData;
 
-  const genreColors = ['#3b82f6', '#10b981', '#ec4899', '#f59e0b', '#8b5cf6'];
+  const genreColors = ["#3b82f6", "#10b981", "#ec4899", "#f59e0b", "#8b5cf6"];
 
   const scoreColors = stats.scoreDistribution.map(({ score }) => {
-    if (score >= 9) return '#10b981';
-    if (score >= 7) return '#3b82f6';
-    if (score >= 5) return '#f59e0b';
-    return '#64748b';
+    if (score >= 9) return "#10b981";
+    if (score >= 7) return "#3b82f6";
+    if (score >= 5) return "#f59e0b";
+    return "#64748b";
   });
 
   return (
@@ -84,17 +93,27 @@ export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatc
         <StatCard icon="🎬" label="Total Anime" value={stats.totalAnime} />
         <StatCard icon="📺" label="Episodes" value={stats.episodesWatched} />
         <StatCard icon="⏱️" label="Days Watched" value={stats.daysWatched} />
-        <StatCard icon="⭐" label="Avg Score" value={stats.avgScore} suffix="/10" />
+        <StatCard
+          icon="⭐"
+          label="Avg Score"
+          value={stats.avgScore}
+          suffix="/10"
+        />
       </div>
 
       <div className="bg-slate-800/40 rounded-lg p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-sm font-medium">📈 Watch history</h2>
-            <p className="text-xs text-slate-500">Episodes and unique anime watched</p>
+            <p className="text-xs text-slate-500">
+              Episodes and unique anime watched
+            </p>
           </div>
 
-          <Select value={watchRange} onValueChange={(value) => setWatchRange(value as WatchRange)}>
+          <Select
+            value={watchRange}
+            onValueChange={(value) => setWatchRange(value as WatchRange)}
+          >
             <SelectTrigger className="w-[130px] border-slate-700 bg-slate-900/40 text-slate-200">
               <SelectValue />
             </SelectTrigger>
@@ -112,10 +131,10 @@ export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatc
             <YAxis stroke="#64748b" fontSize={12} />
             <Tooltip
               contentStyle={{
-                background: '#0f172a',
-                border: '1px solid #334155',
+                background: "#0f172a",
+                border: "1px solid #334155",
                 borderRadius: 8,
-                color: '#e2e8f0',
+                color: "#e2e8f0",
               }}
             />
             <Line
@@ -151,7 +170,8 @@ export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatc
                       className="h-full rounded"
                       style={{
                         width: `${(item.count / Math.max(stats.totalAnime, 1)) * 100}%`,
-                        backgroundColor: genreColors[index % genreColors.length],
+                        backgroundColor:
+                          genreColors[index % genreColors.length],
                       }}
                     />
                   </div>
@@ -172,10 +192,10 @@ export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatc
               <YAxis stroke="#64748b" fontSize={12} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
-                  background: '#0f172a',
-                  border: '1px solid #334155',
+                  background: "#0f172a",
+                  border: "1px solid #334155",
                   borderRadius: 8,
-                  color: '#e2e8f0',
+                  color: "#e2e8f0",
                 }}
               />
               <Bar dataKey="count">
@@ -201,9 +221,11 @@ export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatc
                   />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-slate-500">#{index + 1}</div>
-                    <div className="truncate text-sm font-medium">{entry.anime.title}</div>
+                    <div className="truncate text-sm font-medium">
+                      {entry.anime.title}
+                    </div>
                     <div className="text-xs text-slate-500">
-                      {entry.anime.year ?? 'Unknown year'}
+                      {entry.anime.year ?? "Unknown year"}
                     </div>
                   </div>
                   <span className="flex items-center gap-1 text-amber-400">
@@ -223,13 +245,18 @@ export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatc
           {recentWatchStats.length > 0 ? (
             <div className="space-y-3">
               {recentWatchStats.map((entry) => (
-                <div key={`${entry.anime.id}-${entry.watchedAt}`} className="flex items-center gap-3">
+                <div
+                  key={`${entry.anime.id}-${entry.watchedAt}`}
+                  className="flex items-center gap-3"
+                >
                   <AnimeCover
                     src={entry.anime.coverImage}
                     alt={entry.anime.title}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{entry.anime.title}</div>
+                    <div className="truncate text-sm font-medium">
+                      {entry.anime.title}
+                    </div>
                     <div className="flex items-center gap-2 text-xs text-slate-500">
                       <span>Episode {entry.episode}</span>
                       <span className="h-1 w-1 rounded-full bg-slate-600" />
@@ -251,17 +278,25 @@ export default function StatsClient({ initialList, monthlyWatchStats, weeklyWatc
 
 function calculateStats(animeList: UserAnimeEntry[]) {
   const totalAnime = animeList.length;
-  const episodesWatched = animeList.reduce((sum, entry) => sum + entry.progress, 0);
-  const daysWatched = Math.round((episodesWatched * 24 / 60 / 24) * 10) / 10;
+  const episodesWatched = animeList.reduce(
+    (sum, entry) => sum + entry.progress,
+    0,
+  );
+  const daysWatched = Math.round(((episodesWatched * 24) / 60 / 24) * 10) / 10;
 
-  const ratedAnime = animeList.filter(entry => entry.score !== null);
-  const avgScore = ratedAnime.length > 0
-    ? Math.round((ratedAnime.reduce((sum, entry) => sum + (entry.score || 0), 0) / ratedAnime.length) * 10) / 10
-    : 0;
+  const ratedAnime = animeList.filter((entry) => entry.score !== null);
+  const avgScore =
+    ratedAnime.length > 0
+      ? Math.round(
+          (ratedAnime.reduce((sum, entry) => sum + (entry.score || 0), 0) /
+            ratedAnime.length) *
+            10,
+        ) / 10
+      : 0;
 
   const genreMap = new Map<string, number>();
-  animeList.forEach(entry => {
-    entry.anime.genres.forEach(genre => {
+  animeList.forEach((entry) => {
+    entry.anime.genres.forEach((genre) => {
       genreMap.set(genre, (genreMap.get(genre) || 0) + 1);
     });
   });
@@ -276,14 +311,15 @@ function calculateStats(animeList: UserAnimeEntry[]) {
     scoreMap.set(i, 0);
   }
 
-  ratedAnime.forEach(entry => {
+  ratedAnime.forEach((entry) => {
     if (entry.score !== null) {
       scoreMap.set(entry.score, (scoreMap.get(entry.score) || 0) + 1);
     }
   });
 
-  const scoreDistribution = Array.from(scoreMap.entries())
-    .map(([score, count]) => ({ score, count }));
+  const scoreDistribution = Array.from(scoreMap.entries()).map(
+    ([score, count]) => ({ score, count }),
+  );
 
   return {
     totalAnime,
@@ -296,43 +332,47 @@ function calculateStats(animeList: UserAnimeEntry[]) {
 }
 
 function formatMonth(value: string) {
-  const [year, month] = value.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString('en-US', {
-    month: 'short',
-    year: '2-digit',
+  const [year, month] = value.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
+    month: "short",
+    year: "2-digit",
   });
 }
 
 function formatWeek(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
   });
 }
 
 function formatWatchedAt(value: string) {
-  return new Date(value).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
   });
 }
 
 function AnimeCover({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded bg-slate-900">
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        sizes="44px"
-        className="object-cover"
-      />
+      <Image src={src} alt={alt} fill sizes="44px" className="object-cover" />
     </div>
   );
 }
 
-function StatCard({ icon, label, value, suffix }: { icon: string; label: string; value: number; suffix?: string }) {
+function StatCard({
+  icon,
+  label,
+  value,
+  suffix,
+}: {
+  icon: string;
+  label: string;
+  value: number;
+  suffix?: string;
+}) {
   return (
     <div className="bg-slate-800/40 rounded-lg p-6">
       <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
