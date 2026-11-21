@@ -79,7 +79,7 @@ export function AnimeSeasonPage({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: animeItem.id,
+        animeId: animeItem.id,
         status,
         progress,
         score,
