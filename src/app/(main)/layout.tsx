@@ -15,7 +15,13 @@ export default async function MainLayout({
   const session = (await getServerSession(authOptions)) as SessionUser;
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-[#020617] via-[#0c1a2e]/80 to-[#020617] text-white overflow-hidden">
+    <div
+      className="min-h-screen text-white overflow-hidden"
+      style={{
+        background:
+          "linear-gradient(160deg, #020617 0%, #0c1a2e 40%, #0d2137 65%, #020617 100%)",
+      }}
+    >
       <Navbar session={session} />
       <main>{children}</main>
     </div>
