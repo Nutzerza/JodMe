@@ -1,23 +1,24 @@
+// Client component for the user's anime list
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { AnimeStatus, UserAnimeEntry } from "@/types/anime";
-import { StatusSidebar } from "@/components/StatusSidebar";
-import { AnimeListSkeleton } from "@/components/skeletons/AnimeListSkeleton";
-import { AnimeListItem } from "@/shared/components/AnimeCard";
-import { Button } from "../../shared/components/ui/button";
-import { Input } from "../../shared/components/ui/input";
+import { StatusSidebar } from "@/features/myList/components/StatusSidebar";
+import { AnimeListSkeleton } from "@/features/myList/components/skeletons/AnimeListSkeleton";
+import { AnimeListItem } from "@/shared/components/AnimeListItem";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/shared/components/ui/pagination";
+import { AnimeStatus, UserAnimeEntry } from "@/types/anime";
+import type { StatusCount } from "@/types/anime";
 
 type UpdatePayload = {
   progress?: number;
@@ -25,9 +26,10 @@ type UpdatePayload = {
   score?: number | null;
 };
 
-export default function MyListClient() {
+export function MyListClient() {
   // const [animeList, setAnimeList] = useState<UserAnimeEntry[]>(initialList);
   const [activeStatus, setActiveStatus] = useState<AnimeStatus | "all">("all");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [sortBy, setSortBy] = useState<
     "updatedAt" | "dateAdded" | "score" | "title"
   >("updatedAt");
@@ -42,6 +44,14 @@ export default function MyListClient() {
     totalProgress: 0,
     averageScore: 0,
   });
+  const [statusCounts, setStatusCounts] = useState<StatusCount[]>([
+    { status: "all", label: "All", count: 0 },
+    { status: "watching", label: "Watching", count: 0 },
+    { status: "completed", label: "Completed", count: 0 },
+    { status: "on_hold", label: "On Hold", count: 0 },
+    { status: "dropped", label: "Dropped", count: 0 },
+    { status: "plan_to_watch", label: "Plan", count: 0 },
+  ]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -79,19 +89,61 @@ export default function MyListClient() {
     fetchData();
 
     return () => controller.abort();
-  }, [page, debouncedQuery, sortBy, activeStatus]);
+  }, [page, debouncedQuery, sortBy, activeStatus, refreshKey]);
 
   useEffect(() => {
-    setPage(1);
+    const controller = new AbortController();
+
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/userList/statCount`, {
+          signal: controller.signal,
+        });
+
+        const data = await res.json();
+
+        const formattedData: StatusCount[] = [
+          {
+            status: "all",
+            label: "All",
+            count:
+              data.watching +
+              data.completed +
+              data.on_hold +
+              data.dropped +
+              data.plan_to_watch,
+          },
+          { status: "watching", label: "Watching", count: data.watching },
+          { status: "completed", label: "Completed", count: data.completed },
+          { status: "on_hold", label: "On Hold", count: data.on_hold },
+          { status: "dropped", label: "Dropped", count: data.dropped },
+          { status: "plan_to_watch", label: "Plan", count: data.plan_to_watch },
+        ];
+        setStatusCounts(formattedData);
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error(err);
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => controller.abort();
+  }, [refreshKey]);
+
+  useEffect(() => {
+    function resetPage() {
+      setPage(1);
+    }
+    resetPage();
   }, [debouncedQuery, activeStatus, sortBy]);
 
-  const handleUpdate = async (animeListId: number, data: UpdatePayload) => {
+  const handleUpdate = async (animeId: number, data: UpdatePayload) => {
     const prevState = results;
 
     setResults((prev) =>
-      prev.map((e) =>
-        e.anime.anilistId === animeListId ? { ...e, ...data } : e,
-      ),
+      prev.map((e) => (e.anime.id === animeId ? { ...e, ...data } : e)),
     );
 
     try {
@@ -101,7 +153,7 @@ export default function MyListClient() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          animeListId,
+          animeId,
           ...data,
         }),
       });
@@ -109,6 +161,8 @@ export default function MyListClient() {
       if (!res.ok) {
         throw new Error("API failed");
       }
+
+      toast.success("Updated successfully");
     } catch (err) {
       console.error(err);
       setResults(prevState);
@@ -116,14 +170,12 @@ export default function MyListClient() {
     }
   };
 
-  const handleRemove = async (animeListId: number, title: string) => {
+  const handleRemove = async (id: number, title: string) => {
     const prevState = results;
     const toastId = toast.loading(`Removing "${title}"...`);
 
-    setResults((prev) => prev.filter((e) => e.anime.anilistId !== animeListId));
-
     try {
-      const res = await fetch(`/api/userList/list?animeListId=${animeListId}`, {
+      const res = await fetch(`/api/userList/list?id=${id}`, {
         method: "DELETE",
       });
 
@@ -131,7 +183,9 @@ export default function MyListClient() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Failed to remove");
       }
+      setResults((prev) => prev.filter((e) => e.anime.id !== id));
 
+      setRefreshKey((prev) => prev + 1);
       toast.success(`Removed "${title}"`, { id: toastId });
     } catch (err) {
       console.error(err);
@@ -142,8 +196,9 @@ export default function MyListClient() {
   };
 
   return (
-    <div className="flex gap-8">
+    <div className="flex gap-8 w-full">
       <StatusSidebar
+        statusCounts={statusCounts}
         activeStatus={activeStatus}
         onStatusChange={setActiveStatus}
         sortBy={sortBy}
@@ -158,6 +213,7 @@ export default function MyListClient() {
           <Stat label="Avg Score" value={stats.averageScore} />
         </div>
 
+        {/* Search Bar */}
         <div className="flex gap-3 mb-8">
           <Input
             placeholder="Search anime title..."
@@ -168,7 +224,7 @@ export default function MyListClient() {
           <Button className="bg-purple-600 px-8 h-12">Search</Button>
         </div>
 
-        {/* List */}
+        {/* Anime List */}
         {loading ? (
           <AnimeListSkeleton />
         ) : (
@@ -180,10 +236,8 @@ export default function MyListClient() {
                 progress={entry.progress}
                 score={entry.score}
                 status={entry.status}
-                onUpdate={(data) => handleUpdate(entry.anime.anilistId, data)}
-                onRemove={() =>
-                  handleRemove(entry.anime.anilistId, entry.anime.title)
-                }
+                onUpdate={(data) => handleUpdate(entry.anime.id, data)}
+                onRemove={() => handleRemove(entry.anime.id, entry.anime.title)}
               />
             ))}
           </div>
@@ -196,7 +250,7 @@ export default function MyListClient() {
         )}
 
         {totalPages > 1 && (
-          <Pagination>
+          <Pagination className="mt-4">
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
@@ -217,6 +271,11 @@ export default function MyListClient() {
                       e.preventDefault();
                       setPage(p);
                     }}
+                    className={
+                      p === page
+                        ? "bg-purple-600! text-white! hover:bg-purple-700! hover:text-white!"
+                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                    }
                   >
                     {p}
                   </PaginationLink>
@@ -240,7 +299,7 @@ export default function MyListClient() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: any }) {
+function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="bg-slate-800/40 p-4 rounded">
       <div className="text-xs text-slate-400">{label}</div>

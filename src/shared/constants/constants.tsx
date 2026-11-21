@@ -11,6 +11,7 @@ import {
 
 export const navItems = [
   { name: "Home", path: "/" },
+  { name: "My List", path: "/me" },
   { name: "Search", path: "/search" },
   { name: "Season", path: "/season" },
   { name: "Stats", path: "/stats" },

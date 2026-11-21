@@ -81,3 +81,10 @@ export interface RecentWatchStat {
   episode: number;
   watchedAt: string;
 }
+
+export interface StatusCount {
+  status: AnimeStatus | "all";
+  label: string;
+  count: number;
+  icon?: React.ReactNode;
+}

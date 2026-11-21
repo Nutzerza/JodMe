@@ -1,6 +1,6 @@
 // components/skeletons/AnimeListSkeleton.tsx
 
-import { AnimeCardSkeleton } from '@/components/skeletons/AnimeCardSkeleton';
+import { AnimeCardSkeleton } from '@/features/myList/components/skeletons/AnimeCardSkeleton';
 
 export function AnimeListSkeleton() {
   return (

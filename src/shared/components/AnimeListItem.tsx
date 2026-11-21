@@ -1,9 +1,11 @@
-import { useState } from "react";
+// Component for displaying an anime list item with progress, score, and status.
+
 import Image from "next/image";
+import { useState } from "react";
 import { Star, Trash2 } from "lucide-react";
 import type { Anime, AnimeStatus } from "@/types/anime";
 import { STATUS_CONFIG } from "@/shared/constants/constants";
-import { ScorePickerModal } from "@/components/ScorepickerModal";
+import { ScorePickerModal } from "@/features/myList/components/ScorePickerModal";
 
 interface AnimeListItemProps {
   anime: Anime;
@@ -11,7 +13,7 @@ interface AnimeListItemProps {
   score: number | null;
   status: AnimeStatus;
 
-  // 🔥 ส่ง handler กลับไป parent เพื่อ update DB
+  // ส่ง handler กลับไป parent เพื่อ update DB
   onUpdate?: (data: {
     progress: number;
     status: AnimeStatus;
@@ -34,6 +36,7 @@ export function AnimeListItem({
     totalEpisodes > 0 ? Math.min((progress / totalEpisodes) * 100, 100) : 0;
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.plan_to_watch;
 
+  // Handle progress increase and status update based on total episodes and current status.
   const handleIncrease = () => {
     if (!onUpdate) return;
     const newProgress =
@@ -45,6 +48,7 @@ export function AnimeListItem({
     onUpdate({ progress: newProgress, status: newStatus });
   };
 
+  // Handle progress decrease and status update based on current progress and status.
   const handleDecrease = () => {
     if (!onUpdate) return;
     const newProgress = Math.max(progress - 1, 0);
@@ -59,7 +63,7 @@ export function AnimeListItem({
 
   return (
     <div
-      className="group relative flex items-stretch gap-0 rounded-xl overflow-hidden transition-all duration-200"
+      className="group relative flex w-full items-stretch gap-0 rounded-xl overflow-hidden transition-all duration-200"
       style={{
         background:
           "linear-gradient(135deg,rgba(15,23,42,0.9) 0%,rgba(10,16,32,0.95) 100%)",
@@ -116,7 +120,7 @@ export function AnimeListItem({
         {/* Top row */}
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-white truncate leading-snug mb-1">
+            <h3 className="text-sm font-semibold text-white leading-snug mb-1 line-clamp-2">
               {anime.title}
             </h3>
             <div className="flex items-center gap-1.5 flex-wrap">

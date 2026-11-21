@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { statCountByStatus } from "@/lib/services/userAnimeService";
-import { getUserFromToken } from "../list/route";
+import { getUserFromToken } from "@/shared/utils/getUserFromToken";
 
 export async function GET(req: NextRequest) {
   const userId = await getUserFromToken(req);
@@ -10,12 +10,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await statCountByStatus(userId);
+    const result = await statCountByStatus(Number(userId));
     return NextResponse.json(result);
   } catch (err) {
-    return NextResponse.json(
-      { message: "Search failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Search failed" }, { status: 500 });
   }
 }

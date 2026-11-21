@@ -1,8 +1,10 @@
-// app/u/[username]/mylist/page.tsx
+// Page for displaying the user's anime list
+import { MyListClient } from "@/features/myList/pages/MyListPage";
 
-import MyListClient from "@/components/myListPage/MyListClient";
-
-export default async function MyListPage() {
-  // return <MyListClient />;
-  return <div>ListPage</div>;
+export default function MyListPage() {
+  return (
+    <div className="container mx-auto px-6 py-8">
+      <MyListClient />
+    </div>
+  );
 }

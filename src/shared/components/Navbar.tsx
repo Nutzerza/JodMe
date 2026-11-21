@@ -27,7 +27,8 @@ export function Navbar({ session }: { session: SessionUser }) {
           <nav className="flex items-center gap-2">
             {navItems.map((item) => {
               const active = pathname === item.path;
-
+              if (session?.user && item.path === "/") return null; // Skip rendering the "Home" link in the navbar
+              if (!session?.user && item.path === "/me") return null; // Skip rendering the "My List" link for unauthenticated users
               return (
                 <Link key={item.path} href={item.path}>
                   <Button

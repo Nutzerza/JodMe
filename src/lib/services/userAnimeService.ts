@@ -130,8 +130,8 @@ export async function fetchUserAnimeListByUserId({
   ]);
 
   const newList = list.map((entry) => ({
-    id: entry.id,
-    status: toClientStatus(entry.status) as any,
+    id: entry.animeId,
+    status: toClientStatus(entry.status),
     score: entry.score,
     progress: entry.progress,
     dateAdded: entry.createdAt.toISOString(),
@@ -180,7 +180,7 @@ export async function fetchUserAnimeListByUserId({
   };
 }
 
-export async function statCountByStatus(userId: string) {
+export async function statCountByStatus(userId: number) {
   const counts = await prisma.userAnime.groupBy({
     by: ["status"],
     where: { userId },

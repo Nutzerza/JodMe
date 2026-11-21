@@ -1,14 +1,14 @@
+// API route for managing the user's anime list
+
 import { AnimeStatus } from "@prisma/client";
 import { toPrismaStatus } from "@/features/anime/animeSeason/utils/getCurrentSeason";
-import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-
-import { ensureAnimeInDatabase } from "@/shared/services/animeService";
 import { fetchUserAnimeListByUserId } from "@/lib/services/userAnimeService";
 import { syncWatchHistory } from "@/lib/services/watchHistoryService";
 import { prisma } from "@/lib/prisma";
 import { getUserFromToken } from "@/shared/utils/getUserFromToken";
 
+// GET: Fetch the user's anime list
 export async function GET(req: NextRequest) {
   const tokenUserId = await getUserFromToken(req);
 
@@ -27,13 +27,14 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(list);
 }
 
+// POST: Add or update an anime entry in the user's list
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
     const tokenUserId = await getUserFromToken(req);
 
-    const { id, status, progress, score } = body;
+    const { animeId, status, progress, score } = body;
     if (!tokenUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
       where: {
         userId_animeId: {
           userId,
-          animeId: id,
+          animeId: animeId,
         },
       },
     });
@@ -96,19 +97,19 @@ export async function POST(req: NextRequest) {
         where: {
           userId_animeId: {
             userId,
-            animeId: id,
+            animeId: animeId,
           },
         },
         update: { ...data, progress: newProgress },
         create: {
           userId,
-          animeId: id,
+          animeId: animeId,
           ...data,
           progress: newProgress,
         },
       });
 
-      await syncWatchHistory(userId, id, oldProgress, newProgress, tx);
+      await syncWatchHistory(userId, animeId, oldProgress, newProgress, tx);
 
       return entry;
     });
@@ -123,10 +124,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// DELETE: Remove an anime entry from the user's list
 export async function DELETE(req: NextRequest) {
   try {
     const tokenUserId = await getUserFromToken(req);
-
     if (!tokenUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -134,39 +135,17 @@ export async function DELETE(req: NextRequest) {
     const userId = Number(tokenUserId);
 
     const { searchParams } = new URL(req.url);
-    const animeListId = Number(searchParams.get("animeListId"));
-
-    if (!animeListId) {
-      return NextResponse.json(
-        { error: "Missing animeListId" },
-        { status: 400 },
-      );
-    }
-
-    const anime = await prisma.anime.findUnique({
-      where: { anilistId: animeListId },
-    });
-
-    if (!anime) {
-      return NextResponse.json({ error: "Anime not found" }, { status: 404 });
-    }
-
-    const existing = await prisma.userAnime.findUnique({
-      where: {
-        userId_animeId: { userId, animeId: anime.id },
-      },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Not in list" }, { status: 404 });
+    const id = Number(searchParams.get("id"));
+    if (!id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
     }
 
     await prisma.$transaction(async (tx) => {
       await tx.watchHistory.deleteMany({
-        where: { userId, animeId: anime.id },
+        where: { userId, animeId: id },
       });
       await tx.userAnime.delete({
-        where: { id: existing.id },
+        where: { userId_animeId: { userId, animeId: id } },
       });
     });
 
